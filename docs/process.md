@@ -59,13 +59,42 @@ python run_baseline.py
 
 **Expected runtime:** ~6–8 hours (1,126 questions × ~20 sec per batch of 8)
 
-**Expected results (target for comparison):**
-- Overall accuracy: [TBD — will measure]
-- MCQ accuracy: [TBD]
-- Free-form accuracy: [TBD]
-- Error breakdown: [TBD]
+**Actual runtime:** ~4.5 hours (1,126 questions, started 2026-05-10 11:06 UTC, completed 15:34 UTC)
 
-**Status:** Complete.
+**Command used:**
+```bash
+LD_LIBRARY_PATH=.venv/lib/python3.13/site-packages/torchvision.libs:$LD_LIBRARY_PATH \
+  .venv/bin/python run_baseline.py 2>&1 | tee logs/full_baseline_run.log
+```
+
+**Status:** Complete (2026-05-10)
+
+### 1.2.1 Full Baseline Results (1,126 questions)
+
+| Metric | Value |
+|--------|-------|
+| **Overall Accuracy** | 29.9% (337/1126) |
+| **MCQ Accuracy** | 10.7% (40/375) |
+| **Free-form Accuracy** | 39.5% (297/751) |
+| **Single-part Free-form** | 51.0% (172/337) |
+| **Multi-part Free-form** | 30.2% (125/414) |
+| **Total Errors** | 789 |
+
+**Error breakdown:**
+
+| Category | Count | % of errors |
+|----------|-------|-------------|
+| `FREE_FORM_NO_BOX` | 355 | 45.0% |
+| `MCQ_NO_VALID_LETTER` | 231 | 29.3% |
+| `FREE_FORM_WRONG_ANSWER` | 99 | 12.5% |
+| `MCQ_WRONG_LETTER` | 104 | 13.2% |
+
+**Key observations:**
+1. **MCQ is severely broken at baseline** — 61.6% of MCQ errors are `MCQ_NO_VALID_LETTER` (model not outputting a letter in `\boxed{}`), only 10.7% overall accuracy
+2. **Free-form formatting is the dominant failure** — `FREE_FORM_NO_BOX` accounts for 45% of all errors; model often omits `\boxed{}` wrapper entirely
+3. **Single-part free-form is strongest** (51.0%) when the model does format correctly
+4. **Multi-part free-form is weakest** (30.2%) — requires correct reasoning on multiple sub-problems plus correct formatting
+5. **Dataset breakdown:** 375 MCQ (33%), 751 free-form (67%); of free-form: 337 single-part, 414 multi-part
 
 ### 1.3 Mini-baseline Validation (First 20 Questions)
 
@@ -280,7 +309,13 @@ python run_baseline.py
 
 ## Key Metrics (For Milestone Report)
 
-### Phase 1 Results (Mini-baseline, 20 questions)
+### Phase 1 Results (Full baseline, 1,126 questions — completed 2026-05-10)
+- **Overall accuracy:** 29.9% (337/1126)
+- **MCQ accuracy:** 10.7% (40/375)
+- **Free-form accuracy:** 39.5% (297/751) — single-part 51.0%, multi-part 30.2%
+- **Dominant errors:** `FREE_FORM_NO_BOX` (355, 45%), `MCQ_NO_VALID_LETTER` (231, 29%)
+
+### Phase 1 Results (Mini-baseline, 20 questions — for reference)
 - **Overall accuracy:** 25.0% (5/20)
 - **MCQ accuracy:** 11.1% (1/9)
 - **Free-form accuracy:** 36.4% (4/11) — single-part 75.0%, multi-part 14.3%
@@ -293,11 +328,13 @@ python run_baseline.py
 - **Dominant errors:** `FREE_FORM_WRONG_ANSWER` (5), `MCQ_WRONG_LETTER` (2)
 
 ### Improvements Summary
-| Phase | Overall | MCQ | Free-form |
-|-------|---------|-----|-----------|
-| Phase 1 (baseline) | 25.0% | 11.1% | 36.4% |
-| Phase 2 (prompt fixes) | 60.0% | 66.7% | 54.5% |
-| **Delta** | **+35.0pp** | **+55.6pp** | **+18.1pp** |
+| Phase | Sample | Overall | MCQ | Free-form |
+|-------|--------|---------|-----|-----------|
+| Phase 1 full baseline | 1,126 | 29.9% | 10.7% | 39.5% |
+| Phase 2 (prompt fixes) | 20 | 60.0% | 66.7% | 54.5% |
+| **Delta (20-q sample)** | 20 | **+35.0pp** | **+55.6pp** | **+18.1pp** |
+
+> Note: Phase 2 was validated on the same 20-question mini-sample. The full-dataset Phase 2 run is pending.
 
 ---
 
