@@ -212,6 +212,76 @@ LD_LIBRARY_PATH=.venv/lib/python3.13/site-packages/torchvision.libs:$LD_LIBRARY_
 
 ---
 
+## Infrastructure: Standardized Testing Harness (Complete)
+
+**Created:** `testing_template.py` (2026-05-10)
+
+**Motivation:** After Phase 1 and Phase 2 each produced a standalone script (`run_baseline.py`, `phase2_test.py`), the two scripts had duplicated ~200 lines of identical infrastructure: environment setup, model loading, scoring, error categorization, output saving, and delta reporting. Each new phase would require copy-pasting and carefully patching that boilerplate, creating drift and hiding the per-phase changes in noise.
+
+`testing_template.py` centralizes all shared infrastructure into one file and exposes the per-phase variables as a `Config` dataclass at the top. Future phases only touch what actually changes.
+
+### Design Decisions
+
+**`Config` dataclass at the top**
+
+Every tunable parameter lives in one place: model ID, sampling params, prompt overrides, output paths, majority-voting settings, and few-shot examples. The alternatives — a YAML config file or argparse-only — either require a separate file per run or bury context in shell history. A dataclass is self-documenting, type-checked, and lives in the same file as the code that uses it.
+
+**Environment variables set before the vLLM import**
+
+`CUDA_VISIBLE_DEVICES` and `VLLM_USE_DEEP_GEMM=0` must be set before any torch/vLLM code is imported, or the device assignment races and the Blackwell `DEEP_GEMM` codepath crashes. Phase 1 avoided this by accident (top-of-script assignment); Phase 2 carried it over. The template makes it structurally impossible to forget: a small pre-parser extracts `--gpu` before the main import block, and both env vars are set unconditionally at module load.
+
+**`max_tokens=8192` as the default**
+
+Phase 1 used `max_tokens=2048`, which was identified as a likely source of truncated thinking traces for Qwen3's extended reasoning. Phase 2 raised it to 8192 and saw MCQ accuracy jump 55.6pp (partly formatting, partly un-truncated reasoning). The template makes 8192 the baseline and requires a deliberate `--max-tokens` override to go lower.
+
+**vLLM as the only inference backend**
+
+Phase 1 started with Transformers (INT4) for the mini-baseline and switched to vLLM (INT8) for the full run. Phase 2 used vLLM from the start. The template drops the Transformers path entirely — it was slower, required more memory per token, and added branching complexity. The Phase 2 vLLM settings (`max_model_len=28000`, `max_num_seqs=256`, `max_num_batched_tokens=32768`) become the defaults.
+
+**Phase name drives all output filenames**
+
+`--phase phase3_sampling` writes `results/phase3_sampling_{results,errors,summary}.*`. This makes it impossible to accidentally overwrite a previous phase's results and keeps the results directory self-organizing.
+
+**`--compare` for delta reporting**
+
+The Phase 2 script hardcoded Phase 1 accuracy numbers as literals. The template loads previous summary JSONs by phase name and computes deltas automatically. Multiple `--compare` arguments are supported so a Phase 4 run can diff against both Phase 2 and Phase 3 in one table. If a referenced summary doesn't exist, the delta section is silently skipped rather than crashing.
+
+**Majority voting scaffolded but not fully implemented**
+
+`--samples N` generates N responses per question and passes them to `_majority_vote_mcq` / `_majority_vote_freeform`. MCQ voting is complete (most-common letter wins). Free-form voting uses a correctness-majority heuristic (more than half of samples correct → correct) rather than symbolic answer clustering, which requires non-trivial SymPy logic. A `TODO (Phase 3)` comment marks the upgrade point. At `n_samples=1` (default), both paths are no-ops.
+
+**Few-shot examples as a list in `Config`**
+
+Phase 4 will add worked examples to the prompt. Rather than require a new script, `few_shot_examples` is already wired into `build_prompt` via `_build_few_shot_prefix`. When the list is empty (default), no prefix is added. Populating it for Phase 4 requires only adding dicts to `Config`.
+
+### Usage Reference
+
+```bash
+# Mini-batch smoke test (20 questions, ~2 min)
+python testing_template.py --phase phase3_sampling
+
+# Full 1126-question run with delta vs Phase 2
+python testing_template.py --phase phase3_sampling --full --compare phase2
+
+# Custom N, temperature sweep
+python testing_template.py --phase phase3_temp07 --n 50 --temp 0.7
+
+# Majority voting (8 samples per question)
+python testing_template.py --phase phase3_mv8 --samples 8
+```
+
+### What changes each phase
+
+| Phase | What to edit |
+|-------|-------------|
+| Prompt engineering | `SYSTEM_PROMPT_MATH`, `SYSTEM_PROMPT_MCQ` |
+| Sampling strategy | `--temp`, `--samples`, `TOP_P`, `TOP_K` in `Config` |
+| Few-shot | `few_shot_examples` in `Config` |
+| Model swap / SFT | `MODEL_ID` in `Config` or `--model` (future flag) |
+| Token budget | `--max-tokens` |
+
+---
+
 ## Phase 3: Sampling strategy (Planned)
 
 **Goal:** Majority voting and temperature tuning to boost accuracy without retraining.
@@ -302,6 +372,7 @@ LD_LIBRARY_PATH=.venv/lib/python3.13/site-packages/torchvision.libs:$LD_LIBRARY_
 | Error analysis + categorization | ✅ Done | `results/mini_baseline_errors.jsonl` |
 | Reproducibility documentation | ✅ Done | `docs/process.md` (this file) |
 | Improved prompt engineering | ✅ Done | `results/phase2_summary.json` |
+| Standardized testing harness | ✅ Done | `testing_template.py` |
 | Fine-tuned model checkpoint | ⬜ Planned | TBD |
 | Final leaderboard score + rank | ⬜ Planned | Will be in milestone report abstract |
 
