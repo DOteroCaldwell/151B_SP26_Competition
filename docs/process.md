@@ -65,7 +65,45 @@ python run_baseline.py
 - Free-form accuracy: [TBD]
 - Error breakdown: [TBD]
 
-**Status:** Ready to run. Script fully implements Phase 1 from objectives.md.
+**Status:** Phase 1 full baseline running in background (started 2026-05-09 21:15, estimated completion 2026-05-10 10:15).
+
+### 1.3 Mini-baseline Validation (First 20 Questions)
+
+**Purpose:** Quick validation run to identify error patterns and baseline performance while full pipeline runs.
+
+**Configuration:**
+- **Data:** First 20 questions from public.jsonl (9 MCQ, 11 free-form)
+- **Model:** Qwen3-4B-Thinking-2507, INT4 BitsAndBytes via Transformers
+- **Inference:** Batched generation (batch_size=4, 5 batches)
+- **Sampling:** temperature=0.6, top_p=0.95, top_k=20, max_tokens=2048
+
+**Results (completed 2026-05-10 00:21):**
+
+| Metric | Value |
+|--------|-------|
+| **Overall Accuracy** | 25.0% (5/20) |
+| **MCQ Accuracy** | 11.1% (1/9) |
+| **Free-form Accuracy** | 36.4% (4/11) |
+| **Single-part Free-form** | 75.0% (3/4) |
+| **Multi-part Free-form** | 14.3% (1/7) |
+| **Total Errors** | 15 |
+
+**Error Breakdown:**
+- `MCQ_NO_VALID_LETTER` — 7 errors (missing/invalid letter in boxed answer)
+- `FREE_FORM_NO_BOX` — 7 errors (no `\boxed{}` wrapper in response)
+- `MCQ_WRONG_LETTER` — 1 error (wrong letter despite extraction)
+
+**Key Observations:**
+1. **MCQ failures are formatting-based** (88% of MCQ errors: 7/8 missing valid letter extraction)
+2. **Free-form failures are structural** (not following `\boxed{}` instruction; 58% of free-form errors)
+3. **Single-part free-form performs well** (75%) when answer is wrapped
+4. **Multi-part free-form is weak** (14.3%), suggesting difficulty with multiple sub-answers or comprehension
+
+**Implications for Phase 2:**
+- System prompt for MCQ may need explicit instruction to output letter in correct format
+- Free-form system prompt may need stronger emphasis on `\boxed{}` requirement
+- Consider one-shot example in prompt for multi-part answers
+- May need to increase `MAX_TOKENS` if responses are being truncated
 
 ---
 

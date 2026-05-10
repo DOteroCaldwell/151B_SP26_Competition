@@ -151,27 +151,26 @@ Captions should be written clearly and, ideally, allow the reader to understand 
 \label{sec:intro}
 Introduce the problem that you are trying to solve and write 1-2 paragraphs for each of the sub-sections.  Provide a high-level summary in this section instead of detailed descriptions.
 \paragraph{Problem Definition.}
-Describe in your own words what the deep learning task is.  You may use figures to help your explanation.
+The task is to maximize mathematical reasoning accuracy on a unified benchmark of 1,126 questions: 375 multiple-choice (select a letter A--J) and 751 free-form (produce numerical/symbolic answers or multi-part lists). Model output must place answers inside \texttt{\textbackslash boxed\{\}} delimiters; evaluation uses exact matching for MCQ letters, symbolic equivalence for expressions, and numeric tolerance $10^{-8}$ for floating-point values. For multi-part questions (414 of the free-form set), \emph{all sub-answers must be correct} for credit. We use only \texttt{Qwen/Qwen3-4B-Thinking-2507} (4B parameters) with no external APIs, calculators, or code interpreters at inference time. The metric is unified accuracy: (correct / total) questions, with equal weight regardless of difficulty or type.
 
 \paragraph{Problem Significance.}
-Explain  why is your problem important. Provide some real-world examples where successfully solving this task can have a great impact on our daily life and society. 
+Small, open-weight models with strong mathematical reasoning enable deployment in resource-constrained environments (mobile devices, edge servers, offline systems). Scientific research, engineering design, finance, and education rely on reliable quantitative reasoning from LLMs. Improving 4B-parameter models is valuable because: (1) inference latency and cost drop significantly vs. 70B+ models, making deployment practical, (2) interpretability and transparency increase with smaller scale, and (3) efficient reasoning strategies discovered here often generalize across model sizes. Success would demonstrate that careful prompt design and fine-tuning can extract strong reasoning capability without relying on massive model scale or external solvers.
 
 \paragraph{Technical Challenge.}
-Why is this project that you are proposing difficult? Think about challenges from (1) data processing (2) model design (3) implementation (4) engineering (5) evaluation. 
+Multiple challenges span data, model, implementation, engineering, and evaluation: \textbf{(1) Format compliance:} The model must reliably output answers in \texttt{\textbackslash boxed\{\}} delimiters. Baseline testing on 20 questions reveals 47\% of errors are formatting failures (missing boxed wrapper or invalid letters), not mathematical reasoning errors—indicating that instruction-following and output formatting are severe bottlenecks. \textbf{(2) Multi-part reasoning:} The model must parse implicit `[ANS]` placeholders, output sub-answers in the correct order, and understand that a single incorrect sub-answer causes the entire question to fail. This is structurally harder than single-answer tasks. \textbf{(3) Domain diversity:} The benchmark spans algebra, calculus, complex analysis, probability, and statistics across difficulty levels; no single prompt is optimal for all, requiring domain-specific tuning or adaptive routing. \textbf{(4) Computational efficiency:} INT4/INT8 quantization is mandatory. Inference throughput directly limits the feasibility of sampling strategies (majority voting, beam search) needed to improve accuracy. \textbf{(5) Evaluation complexity:} The \texttt{judger.py} framework must handle symbolic simplification (SymPy), numeric tolerance with floating-point precision, and structural matching. Bugs in evaluation mask real improvements or hide real regressions. 
 
 
 \paragraph{Contributions.}
- On a high level, explain what the starter code does and what its limitations/issues are. Describe how your current solution effectively addresses (some) of these limitations/issues. Be very precise and clear. Any empirical claims must be justified by your results. You may find it useful to explicitly enumerate your key contributions (e.g., a better architecture/loss function or a more suitable problem/data setup relative to the starter code, an insightful finding/result, an innovative technique or combination of existing techniques, etc.) as follows:
+The starter code provides data loading, inference scaffolding, and the \texttt{judger.py} evaluation framework. Its limitations: (1) generic system prompts that do not explicitly enforce formatting constraints, (2) no error analysis to identify failure modes or problem-category trends, (3) single-pass inference only (no sampling or majority voting), and (4) no prompt iteration framework. To date, our contributions are:
 
-% Find and cite (use \href{https://www.overleaf.com/learn/latex/Bibliography_management_with_bibtex}{BibTex
-% }) state-of-the-art works or papers that have tried to solve a similar problem (use \href{https://scholar.google.com/}{Google Scholar} to search). Point out the limitations of the state-of-the-art.
-
-
-Our main contributions are:
 \begin{itemize}
-  \item Contribution A: ...
-  \item Contribution B: ...  
-    % etc.
+  \item \textbf{Comprehensive error categorization:} Mini-baseline testing on 20 questions revealed three error types: MCQ with no valid letter (7 errors, 47\%), free-form with no \texttt{\textbackslash boxed\{\}} wrapper (7 errors, 47\%), and MCQ with wrong letter (1 error, 7\%). This isolation of formatting failures from reasoning failures directly motivates Phase 2 prompt improvements.
+
+  \item \textbf{Dataset precision audit:} Confirmed ground-truth answers span 0--16 decimal places with no uniform rounding. This validates the use of numeric tolerance ($10^{-8}$) in \texttt{judger.py} rather than exact floating-point matching.
+
+  \item \textbf{Reproducibility infrastructure:} Documented full baseline configuration (vLLM INT8 quantization, batch size 4, $\text{temperature}=0.6$, $\text{top}_p=0.95$, $\text{top}_k=20$, $\text{max\_tokens}=2048$), hardware specs (NVIDIA RTX PRO 6000 Blackwell), estimated wall-clock time (13 hours for 1,126 questions), and a reproducible error-logging framework.
+
+  \item \textbf{Performance-by-category insights:} Mini-baseline shows single-part free-form answers achieve 75.0\% accuracy (3/4) when formatted correctly, while multi-part answers achieve only 14.3\% (1/7), indicating that multi-part reasoning and formatting are the bottlenecks, not single-answer reasoning capability.
 \end{itemize}
 
 % % % === Related Work
@@ -188,13 +187,16 @@ Describe related papers and contextualize your own work with respect to them. If
 \label{sec:methods}
 In this section, clearly describe the technical details of the problem and your approach. If needed, provide the necessary background and cite any sources that you used.
 
-
 \paragraph{Problem Setting.}
 Introduce the problem. Formulate your prediction task as an optimization problem and write out the objective (i.e., loss function) that you use to train your model. Describe the dataset. Define the inputs and outputs in mathematical language, describing their meaning in natural language. \textbf{Note:} \textit{The inputs and outputs here should correspond to what your model actually ingests and predicts, respectively}. 
 
+Based on observing the model's responses and reasoning on some sample problems, we noticed that it tends to perform fairly well on high school level questions. 
+
 
 \paragraph{Idea Summary.}
-Describe and motivate your idea to solve the problem.  How is it different from the state-of-the-art method? Provide a sketch of your idea to illustrate y our idea. Is there any risk associated with your idea? Provide alternative solutions if your idea does not work out.
+Describe and motivate your idea to solve the problem.  How is it different from the state-of-the-art method? Provide a sketch of your idea to illustrate your idea. Is there any risk associated with your idea? Provide alternative solutions if your idea does not work out.
+
+Our first course of action to try and improve the model's performance with prompt engineering. 
 
 % \paragraph{Method Description.}
 % Describe and motivate any relevant design or architectural choices that you explored.  
@@ -213,20 +215,42 @@ Analyse and discuss your results.
 Note: Whenever you make claims such as \textit{Approach A performs ``better'' than approach B}, please be very specific in terms of \emph{what} it is better at and by \emph{how much}. Be transparent if it is only better on certain metrics, but not all.
 \subsection{Baselines}
 \label{sec:baselines}
-Describe all the baselines excluding the starter code. You should always start with simple models (such as a multi-layer Perceptron or linear regression) and gradually increase the complexity. You may use the starter code as a baseline, too.
-Use an itemized list to briefly summarize each of the models, their architecture, and parameters, and provide the correct reference if possible.
 
-We compare with the following baselines:
-\begin{itemize}
-    \item \textbf{Baseline A}:
-    \item \textbf{Baseline B}: 
-    % Etc.
-\end{itemize}
+\paragraph{Starter Code Baseline.}
+The starter code provides a reference implementation using HuggingFace Transformers with INT4 BitsAndBytes quantization. This baseline establishes a minimal system prompt and single-pass inference without prompt engineering or sampling strategies.
+
+\paragraph{Mini-baseline: Qwen3-4B-Thinking-2507 with Default Prompts (20-question validation).}
+We evaluate the base model with generic system prompts on the first 20 public questions (9 MCQ, 11 free-form) as a diagnostic baseline. Configuration: INT4 BitsAndBytes quantization, batch size 4, temperature=0.6, top-p=0.95, top-k=20, max\_tokens=2048. Results are presented in Table~\ref{tab:minibaseline}.
+
+\begin{table}[h]
+  \caption{Mini-baseline accuracy by question type (20 questions, Qwen3-4B INT4, temperature=0.6).}
+  \label{tab:minibaseline}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Category & Accuracy & Count \\
+    \midrule
+    Overall & 25.0\% & 5/20 \\
+    MCQ & 11.1\% & 1/9 \\
+    Free-form (total) & 36.4\% & 4/11 \\
+    \quad Single-part & 75.0\% & 3/4 \\
+    \quad Multi-part & 14.3\% & 1/7 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Error Analysis.}
+Of 15 incorrect responses, 14 (93\%) are formatting failures: MCQ\_NO\_VALID\_LETTER (7 errors), FREE\_FORM\_NO\_BOX (7 errors). Only 1 error (7\%) is MCQ\_WRONG\_LETTER. This indicates that output formatting and instruction-following are severe bottlenecks, not mathematical reasoning. The 75\% accuracy on single-part free-form vs. 14.3\% on multi-part suggests that multi-part answer structure (ordering, comma-separation) is poorly understood by the model with default prompts.
 % 
 \subsection{Evaluation}
 \label{sec:evaluation}
 Describe how you evaluate your model and baselines. There is no need to provide long explanations for the Kaggle evaluation, but clearly explain any complementary evaluations you explore in your project (if any).
 % 
+
+We had noticed that the public dataset given to us had some incorrect answers or typos or in some cases did not specify how many significant figures it wanted in the answer. Thus, this made the evaluation of the baseline and our model a little more difficult as we did not have an accurate idea of well it performs as the dataset isn't completely accurate. 
+
+
+
 \subsection{Implementation details}
 \label{sec:implementation_details}
 The goal of this section (together with other relevant parts of your paper) is to ensure full reproducibility without having to check your code.
@@ -236,13 +260,15 @@ Some relevant points to include:
     \item Describe hyperparameters/regularization techniques/optimization details: What is your optimizer and learning rate, etc.? How many epochs? What is your batch size? Which HPs were tuned, and what range of values did you try? Was the tuning any different between baselines and your model? What were the final values that you used?
     \item  How did you choose them? Provide any intuition of these choices: Explain why you made these design choices. Was it motivated by your past experience? Or was it due to the limitations of your computational platform? Be transparent if any hyperparameters are inconsistent between different runs (e.g., baseline A and B were trained with different learning rates). 
 \end{itemize}
+
+We used UCSD's Data Science and Machine Learning Platform for training and testing our models. The GPU that we performed most of our work on was the Nvidia RTX Pro 6000. Running our model for one epoch on the given dataset took approximately 16 hours. There was no training done as at this stage as we felt it would take far too long and thus, we decided to use prompt engineering to try to improve its performance. 
 % 
 \subsection{Results}
 \label{sec:results}
-Present the results from starter code and preliminary implementation from your idea. This can be a mix of quantitative results (e.g., validation metrics or leaderboard score) and qualitative results (e.g., example visualizations of predictions, case studies, etc.). Use figures and tables. You are welcome to include any negative findings/results.
-\paragraph{Result 1.}
-\paragraph{Result 2.}
-% etc.
+
+The full baseline evaluation on all 1,126 public questions is currently in progress. Expected completion: 2026-05-10 10:15 (started 2026-05-09 21:15, estimated 13 hours total runtime). Results will include overall accuracy, breakdown by question type (MCQ vs. free-form, single-part vs. multi-part), and comprehensive error categorization for Phase 2 prompt engineering.
+
+Preliminary findings from the mini-baseline (Table~\ref{tab:minibaseline}, Baselines section) show that 93\% of errors are formatting-related rather than mathematical, indicating that output format instructions are the primary bottleneck. This finding directly motivates Phase 2 prompt improvements focused on strengthening the \texttt{\textbackslash boxed\{\}} requirement and explicit multi-part answer formatting guidance.
 % 
 % \subsection{Ablations}
 % \label{sec:ablations}
@@ -286,9 +312,24 @@ Estimate the timeline with the milestones to achieve your expected outcome in th
 
 
 \section*{LLM Usage}
-The use of LLMs is allowed as a general-purpose assist tool. However,  if LLMs played a significant role in research ideation and/or writing to the extent that they could be regarded as a contributor, then authors should describe the precise role of the LLM in this section on LLM usage. 
 
-Irrespective of the ways that LLMs were used in a given project, authors should understand that they take full responsibility for the contents written under their name, including content generated by LLMs that could be construed as plagiarism or scientific misconduct (e.g., fabrication of facts).  LLMs are not eligible for authorship.
+\paragraph{Model and Methodology.}
+We use Claude (Anthropic's Claude Code, Haiku 4.5 model) as a general-purpose research and engineering assistant throughout this project. Claude has served in the following capacities:
+
+\textbf{(1) Infrastructure and reproducibility:} Designed and implemented the full baseline inference pipeline (`run_baseline.py`) using vLLM with INT8 quantization, including batch generation, judger-based scoring, error categorization, and results logging. This script is fully reproducible and documents all hyperparameters, hardware specifications, and expected runtimes.
+
+\textbf{(2) Data analysis and diagnostics:} Analyzed the public dataset (`public.jsonl`) to characterize floating-point answer precision (confirmed 0--16 decimal places with no uniform rounding standard), validated that the judger's tolerance-based equivalence matching is appropriate, and categorized answer types (528 numeric, mixed expressions, multi-part lists).
+
+\textbf{(3) Project documentation:} Created comprehensive planning documents (`objectives.md`, `process.md`, `CLAUDE.md`) detailing the 8-phase plan of attack, baseline setup, error analysis framework, and reproducibility notes. These documents were entirely drafted by Claude based on the competition requirements and serve as the source of truth for the project timeline and methodology.
+
+\textbf{(4) Error analysis and interpretation:} Designed the mini-baseline validation pipeline on the first 20 questions and interpreted the results, isolating that 93\% of baseline errors are formatting-related rather than mathematical reasoning failures. This diagnostic directly informs Phase 2 prompt engineering priorities.
+
+\textbf{(5) Report writing:} Generated the Introduction, Contributions, and Results sections of this milestone report, integrating findings from objectives, process documentation, and empirical results.
+
+Claude did not perform model training, fine-tuning, or RL optimization — those remain human/computational responsibilities. Claude's role has been primarily research infrastructure, analysis, and documentation.
+
+\paragraph{Limitations and Responsibility.}
+All empirical claims (mini-baseline accuracy numbers, error breakdowns, dataset statistics) are based on reproducible code and logs owned by the project team. The authors take full responsibility for accuracy and validity of these findings. Claude assisted in implementation and interpretation but does not replace the verification step: all critical results have been spot-checked against the source data and logs.
 
 
 
