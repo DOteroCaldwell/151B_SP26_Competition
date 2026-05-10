@@ -1,0 +1,290 @@
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.3.5 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "/home/doterocaldwell/151B_SP26_Competition/phase2_test.py", line 20, in <module>
+    from transformers import AutoTokenizer
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/import_utils.py", line 2226, in __getattr__
+    module = self._get_module(self._class_to_module[name])
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/import_utils.py", line 2458, in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+  File "/opt/conda/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/models/auto/tokenization_auto.py", line 37, in <module>
+    from ..encoder_decoder import EncoderDecoderConfig
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/import_utils.py", line 2226, in __getattr__
+    module = self._get_module(self._class_to_module[name])
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/import_utils.py", line 2458, in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+  File "/opt/conda/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/models/encoder_decoder/configuration_encoder_decoder.py", line 27, in <module>
+    @auto_docstring(checkpoint="")
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/auto_docstring.py", line 4510, in auto_docstring_decorator
+    return auto_class_docstring(obj, custom_args=custom_args, custom_intro=custom_intro, checkpoint=checkpoint)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/auto_docstring.py", line 4256, in auto_class_docstring
+    getattr(auto_module, PLACEHOLDER_TO_AUTO_MODULE["model_class"][0]),
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/import_utils.py", line 2320, in __getattr__
+    value = self._get_module(name)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/import_utils.py", line 2458, in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+  File "/opt/conda/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/models/auto/modeling_auto.py", line 21, in <module>
+    from .auto_factory import (
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/models/auto/auto_factory.py", line 43, in <module>
+    from ...generation import GenerationMixin
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/import_utils.py", line 2226, in __getattr__
+    module = self._get_module(self._class_to_module[name])
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/utils/import_utils.py", line 2458, in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+  File "/opt/conda/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/generation/utils.py", line 53, in <module>
+    from .candidate_generator import (
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/transformers/generation/candidate_generator.py", line 31, in <module>
+    from sklearn.metrics import roc_curve
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sklearn/__init__.py", line 70, in <module>
+    from sklearn.base import clone  # noqa: E402
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sklearn/base.py", line 19, in <module>
+    from sklearn.utils._metadata_requests import _MetadataRequester, _routing_enabled
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sklearn/utils/__init__.py", line 9, in <module>
+    from sklearn.utils._chunking import gen_batches, gen_even_slices
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sklearn/utils/_chunking.py", line 11, in <module>
+    from sklearn.utils._param_validation import Interval, validate_params
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sklearn/utils/_param_validation.py", line 17, in <module>
+    from sklearn.utils.validation import _is_arraylike_not_scalar
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sklearn/utils/validation.py", line 24, in <module>
+    from sklearn.utils._array_api import (
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sklearn/utils/_array_api.py", line 20, in <module>
+    from sklearn.utils.fixes import parse_version
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sklearn/utils/fixes.py", line 19, in <module>
+    import pandas as pd
+  File "/opt/conda/lib/python3.11/site-packages/pandas/__init__.py", line 49, in <module>
+    from pandas.core.api import (
+  File "/opt/conda/lib/python3.11/site-packages/pandas/core/api.py", line 28, in <module>
+    from pandas.core.arrays import Categorical
+  File "/opt/conda/lib/python3.11/site-packages/pandas/core/arrays/__init__.py", line 1, in <module>
+    from pandas.core.arrays.arrow import ArrowExtensionArray
+  File "/opt/conda/lib/python3.11/site-packages/pandas/core/arrays/arrow/__init__.py", line 5, in <module>
+    from pandas.core.arrays.arrow.array import ArrowExtensionArray
+  File "/opt/conda/lib/python3.11/site-packages/pandas/core/arrays/arrow/array.py", line 50, in <module>
+    from pandas.core import (
+  File "/opt/conda/lib/python3.11/site-packages/pandas/core/ops/__init__.py", line 8, in <module>
+    from pandas.core.ops.array_ops import (
+  File "/opt/conda/lib/python3.11/site-packages/pandas/core/ops/array_ops.py", line 56, in <module>
+    from pandas.core.computation import expressions
+  File "/opt/conda/lib/python3.11/site-packages/pandas/core/computation/expressions.py", line 21, in <module>
+    from pandas.core.computation.check import NUMEXPR_INSTALLED
+  File "/opt/conda/lib/python3.11/site-packages/pandas/core/computation/check.py", line 5, in <module>
+    ne = import_optional_dependency("numexpr", errors="warn")
+  File "/opt/conda/lib/python3.11/site-packages/pandas/compat/_optional.py", line 135, in import_optional_dependency
+    module = importlib.import_module(name)
+  File "/opt/conda/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/opt/conda/lib/python3.11/site-packages/numexpr/__init__.py", line 24, in <module>
+    from numexpr.interpreter import MAX_THREADS, use_vml, __BLOCK_SIZE1__
+AttributeError: _ARRAY_API not found
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.3.5 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "/home/doterocaldwell/151B_SP26_Competition/phase2_test.py", line 21, in <module>
+    from vllm import LLM, SamplingParams
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/__init__.py", line 70, in __getattr__
+    module = import_module(module_name, __package__)
+  File "/opt/conda/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/entrypoints/llm.py", line 51, in <module>
+    from vllm.entrypoints.pooling.factories import init_pooling_io_processors
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/entrypoints/pooling/factories.py", line 15, in <module>
+    from .base.io_processor import PoolingIOProcessor
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/entrypoints/pooling/base/io_processor.py", line 15, in <module>
+    from vllm.entrypoints.openai.engine.serving import RendererChatRequest, RendererRequest
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/entrypoints/openai/engine/serving.py", line 21, in <module>
+    from vllm.engine.protocol import EngineClient
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/engine/protocol.py", line 22, in <module>
+    from vllm.v1.engine.input_processor import InputProcessor
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/engine/input_processor.py", line 20, in <module>
+    from vllm.multimodal.encoder_budget import MultiModalBudget
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/multimodal/encoder_budget.py", line 10, in <module>
+    from vllm.v1.core.encoder_cache_manager import compute_mm_encoder_budget
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/core/encoder_cache_manager.py", line 9, in <module>
+    from vllm.v1.request import Request
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/request.py", line 24, in <module>
+    from vllm.v1.structured_output.request import StructuredOutputRequest
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/structured_output/__init__.py", line 19, in <module>
+    from vllm.v1.structured_output.backend_xgrammar import XgrammarBackend
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/structured_output/backend_xgrammar.py", line 132, in <module>
+    class XgrammarGrammar(StructuredOutputGrammar):
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/structured_output/backend_xgrammar.py", line 141, in XgrammarGrammar
+    matcher: xgr.GrammarMatcher = field(hash=False)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/utils/import_utils.py", line 383, in __getattr__
+    self._module = self._load()
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/utils/import_utils.py", line 367, in _load
+    module = importlib.import_module(self.__name__)
+  File "/opt/conda/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/xgrammar/__init__.py", line 1, in <module>
+    from . import exception, load_binding, structural_tag, testing
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/xgrammar/exception.py", line 3, in <module>
+    from tvm_ffi import register_error
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/tvm_ffi/__init__.py", line 40, in <module>
+    from .registry import (
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/tvm_ffi/registry.py", line 26, in <module>
+    from . import core
+  File "/opt/conda/lib/python3.11/site-packages/ml_dtypes/__init__.py", line 32, in <module>
+    from ml_dtypes._custom_floats import bfloat16
+AttributeError: _ARRAY_API not found
+ImportError: numpy.core._multiarray_umath failed to import
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.3.5 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "/home/doterocaldwell/151B_SP26_Competition/phase2_test.py", line 21, in <module>
+    from vllm import LLM, SamplingParams
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/__init__.py", line 70, in __getattr__
+    module = import_module(module_name, __package__)
+  File "/opt/conda/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/entrypoints/llm.py", line 51, in <module>
+    from vllm.entrypoints.pooling.factories import init_pooling_io_processors
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/entrypoints/pooling/factories.py", line 15, in <module>
+    from .base.io_processor import PoolingIOProcessor
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/entrypoints/pooling/base/io_processor.py", line 15, in <module>
+    from vllm.entrypoints.openai.engine.serving import RendererChatRequest, RendererRequest
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/entrypoints/openai/engine/serving.py", line 21, in <module>
+    from vllm.engine.protocol import EngineClient
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/engine/protocol.py", line 22, in <module>
+    from vllm.v1.engine.input_processor import InputProcessor
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/engine/input_processor.py", line 20, in <module>
+    from vllm.multimodal.encoder_budget import MultiModalBudget
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/multimodal/encoder_budget.py", line 10, in <module>
+    from vllm.v1.core.encoder_cache_manager import compute_mm_encoder_budget
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/core/encoder_cache_manager.py", line 9, in <module>
+    from vllm.v1.request import Request
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/request.py", line 24, in <module>
+    from vllm.v1.structured_output.request import StructuredOutputRequest
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/structured_output/__init__.py", line 19, in <module>
+    from vllm.v1.structured_output.backend_xgrammar import XgrammarBackend
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/structured_output/backend_xgrammar.py", line 132, in <module>
+    class XgrammarGrammar(StructuredOutputGrammar):
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/v1/structured_output/backend_xgrammar.py", line 141, in XgrammarGrammar
+    matcher: xgr.GrammarMatcher = field(hash=False)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/utils/import_utils.py", line 383, in __getattr__
+    self._module = self._load()
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/vllm/utils/import_utils.py", line 367, in _load
+    module = importlib.import_module(self.__name__)
+  File "/opt/conda/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/xgrammar/__init__.py", line 1, in <module>
+    from . import exception, load_binding, structural_tag, testing
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/xgrammar/exception.py", line 3, in <module>
+    from tvm_ffi import register_error
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/tvm_ffi/__init__.py", line 48, in <module>
+    from ._dtype import dtype
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/tvm_ffi/_dtype.py", line 315, in <module>
+    import ml_dtypes
+  File "/opt/conda/lib/python3.11/site-packages/ml_dtypes/__init__.py", line 32, in <module>
+    from ml_dtypes._custom_floats import bfloat16
+AttributeError: _ARRAY_API not found
+ImportError: numpy.core._multiarray_umath failed to import
+[Phase 2] Loading first 20 questions...
+  20 questions (9 MCQ, 11 free-form)
+[Phase 2] Loading model (vLLM, INT8 bitsandbytes)...
+INFO 05-10 02:54:30 [utils.py:233] non-default args: {'trust_remote_code': True, 'load_format': 'bitsandbytes', 'max_model_len': 28000, 'enable_prefix_caching': False, 'gpu_memory_utilization': 0.5, 'max_num_batched_tokens': 32768, 'max_num_seqs': 256, 'disable_log_stats': True, 'quantization': 'bitsandbytes', 'model': 'Qwen/Qwen3-4B-Thinking-2507'}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+INFO 05-10 02:54:31 [model.py:555] Resolved architecture: Qwen3ForCausalLM
+INFO 05-10 02:54:31 [model.py:1680] Using max model len 28000
+INFO 05-10 02:54:31 [scheduler.py:239] Chunked prefill is enabled with max_num_batched_tokens=32768.
+INFO 05-10 02:54:32 [nixl_utils.py:20] Setting UCX_RCACHE_MAX_UNRELEASED to '1024' to avoid a rare memory leak in UCX when using NIXL.
+WARNING 05-10 02:54:32 [nixl_utils.py:34] NIXL is not available
+WARNING 05-10 02:54:32 [nixl_utils.py:44] NIXL agent config is not available
+INFO 05-10 02:54:32 [vllm.py:840] Asynchronous scheduling is enabled.
+INFO 05-10 02:54:32 [kernel.py:205] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'])
+(EngineCore pid=8522) INFO 05-10 02:54:33 [core.py:109] Initializing a V1 LLM engine (v0.20.1) with config: model='Qwen/Qwen3-4B-Thinking-2507', speculative_config=None, tokenizer='Qwen/Qwen3-4B-Thinking-2507', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=28000, download_dir=None, load_format=bitsandbytes, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=bitsandbytes, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=Qwen/Qwen3-4B-Thinking-2507, enable_prefix_caching=False, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [32768], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native']), enable_flashinfer_autotune=True, moe_backend='auto')
+(EngineCore pid=8522) INFO 05-10 02:54:34 [parallel_state.py:1402] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://10.40.158.152:41425 backend=nccl
+(EngineCore pid=8522) INFO 05-10 02:54:34 [parallel_state.py:1715] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=8522) INFO 05-10 02:54:35 [gpu_model_runner.py:4777] Starting to load model Qwen/Qwen3-4B-Thinking-2507...
+(EngineCore pid=8522) INFO 05-10 02:54:37 [cuda.py:368] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=8522) INFO 05-10 02:54:37 [flash_attn.py:646] Using FlashAttention version 3
+(EngineCore pid=8522) INFO 05-10 02:54:37 [bitsandbytes_loader.py:786] Loading weights with BitsAndBytes quantization. May take a while ...
+(EngineCore pid=8522) INFO 05-10 02:54:38 [weight_utils.py:904] Filesystem type for checkpoints: NFS4. Checkpoint size: 7.49 GiB. Available RAM: 1448.75 GiB.
+(EngineCore pid=8522) INFO 05-10 02:54:38 [weight_utils.py:874] Prefetching checkpoint files into page cache started (in background)
+(EngineCore pid=8522) Loading safetensors checkpoint shards:   0% Completed | 0/3 [00:00<?, ?it/s]
+(EngineCore pid=8522) INFO 05-10 02:54:38 [weight_utils.py:851] Prefetching checkpoint files: 10% (1/3)
+(EngineCore pid=8522) /home/doterocaldwell/.local/lib/python3.11/site-packages/bitsandbytes/backends/cuda/ops.py:213: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
+(EngineCore pid=8522)   torch._check_is_size(blocksize)
+(EngineCore pid=8522) INFO 05-10 02:54:38 [weight_utils.py:851] Prefetching checkpoint files: 20% (2/3)
+(EngineCore pid=8522) INFO 05-10 02:54:38 [weight_utils.py:851] Prefetching checkpoint files: 30% (3/3)
+(EngineCore pid=8522) INFO 05-10 02:54:38 [weight_utils.py:869] Prefetching checkpoint files into page cache finished in 0.35s
+(EngineCore pid=8522) Loading safetensors checkpoint shards:  33% Completed | 1/3 [00:00<00:01,  1.32it/s]
+(EngineCore pid=8522) Loading safetensors checkpoint shards:  67% Completed | 2/3 [00:01<00:00,  1.39it/s]
+(EngineCore pid=8522) Loading safetensors checkpoint shards: 100% Completed | 3/3 [00:01<00:00,  2.25it/s]
+(EngineCore pid=8522) Loading safetensors checkpoint shards: 100% Completed | 3/3 [00:01<00:00,  1.92it/s]
+(EngineCore pid=8522) 
+(EngineCore pid=8522) INFO 05-10 02:54:40 [gpu_model_runner.py:4879] Model loading took 2.7 GiB memory and 3.745018 seconds
+(EngineCore pid=8522) INFO 05-10 02:54:47 [backends.py:1069] Using cache directory: /home/doterocaldwell/.cache/vllm/torch_compile_cache/38dbdeb81d/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=8522) INFO 05-10 02:54:47 [backends.py:1128] Dynamo bytecode transform time: 6.70 s
+(EngineCore pid=8522) INFO 05-10 02:54:54 [backends.py:376] Cache the graph of compile range (1, 32768) for later use
+(EngineCore pid=8522) INFO 05-10 02:55:00 [backends.py:391] Compiling a graph for compile range (1, 32768) takes 13.07 s
+(EngineCore pid=8522) INFO 05-10 02:55:05 [decorators.py:668] saved AOT compiled function to /home/doterocaldwell/.cache/vllm/torch_compile_cache/torch_aot_compile/63026a9f2d62563436e36d5e22fe6bdc091dbff66e1ecbd45af94ceae3391141/rank_0_0/model
+(EngineCore pid=8522) INFO 05-10 02:55:05 [monitor.py:53] torch.compile took 24.80 s in total
+(EngineCore pid=8522) INFO 05-10 02:55:06 [monitor.py:81] Initial profiling/warmup run took 0.77 s
+(EngineCore pid=8522) INFO 05-10 02:55:15 [gpu_model_runner.py:5963] Profiling CUDA graph memory: PIECEWISE=51 (largest=512), FULL=35 (largest=256)
+(EngineCore pid=8522) INFO 05-10 02:55:17 [gpu_model_runner.py:6042] Estimated CUDA graph memory: 0.49 GiB total
+(EngineCore pid=8522) INFO 05-10 02:55:18 [gpu_worker.py:440] Available KV cache memory: 3.87 GiB
+(EngineCore pid=8522) INFO 05-10 02:55:18 [gpu_worker.py:455] CUDA graph memory profiling is enabled (default since v0.21.0). The current --gpu-memory-utilization=0.5000 is equivalent to --gpu-memory-utilization=0.4748 without CUDA graph memory profiling. To maintain the same effective KV cache size as before, increase --gpu-memory-utilization to 0.5252. To disable, set VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0.
+(EngineCore pid=8522) INFO 05-10 02:55:18 [kv_cache_utils.py:1708] GPU KV cache size: 28,192 tokens
+(EngineCore pid=8522) INFO 05-10 02:55:18 [kv_cache_utils.py:1709] Maximum concurrency for 28,000 tokens per request: 1.01x
+(EngineCore pid=8522) 2026-05-10 02:55:18,161 - INFO - autotuner.py:457 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore pid=8522) 2026-05-10 02:55:18,953 - INFO - autotuner.py:466 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(EngineCore pid=8522) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%| | 0/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   2%| | 1/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   4%| | 2/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   6%| | 3/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   8%| | 4/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  10%| | 5/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  12%| | 6/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  14%|▏| 7/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  16%|▏| 8/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  18%|▏| 9/51 [00:0Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  20%|▏| 10/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  22%|▏| 11/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  24%|▏| 12/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  25%|▎| 13/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  27%|▎| 14/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  29%|▎| 15/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  31%|▎| 16/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  33%|▎| 17/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  35%|▎| 18/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  37%|▎| 19/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  39%|▍| 20/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  41%|▍| 21/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|▍| 22/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  45%|▍| 23/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  47%|▍| 24/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  49%|▍| 25/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|▌| 26/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  53%|▌| 27/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  55%|▌| 28/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  57%|▌| 29/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  59%|▌| 30/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  61%|▌| 31/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|▋| 32/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  65%|▋| 33/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  67%|▋| 34/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|▋| 35/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  71%|▋| 36/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  73%|▋| 37/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  75%|▋| 38/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  76%|▊| 39/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  78%|▊| 40/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  80%|▊| 41/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  82%|▊| 42/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  84%|▊| 43/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|▊| 44/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  88%|▉| 45/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  90%|▉| 46/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  92%|▉| 47/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  94%|▉| 48/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  96%|▉| 49/51 [00:Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  98%|▉| 50/51 [00:/home/doterocaldwell/.local/lib/python3.11/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
+(EngineCore pid=8522)   torch._check_is_size(blocksize)
+(EngineCore pid=8522) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|█| 51/51 [00:
+(EngineCore pid=8522) Capturing CUDA graphs (decode, FULL):   0%|         | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):   3%| | 1/35 [00:00<00:05,  6.72it/s]Capturing CUDA graphs (decode, FULL):   6%| | 2/35 [00:00<00:07,  4.29it/s]Capturing CUDA graphs (decode, FULL):   9%| | 3/35 [00:00<00:06,  5.22it/s]Capturing CUDA graphs (decode, FULL):  11%| | 4/35 [00:00<00:06,  5.04it/s]Capturing CUDA graphs (decode, FULL):  14%|▏| 5/35 [00:00<00:05,  5.71it/s]Capturing CUDA graphs (decode, FULL):  17%|▏| 6/35 [00:01<00:04,  6.20it/s]Capturing CUDA graphs (decode, FULL):  20%|▏| 7/35 [00:01<00:04,  6.61it/s]Capturing CUDA graphs (decode, FULL):  23%|▏| 8/35 [00:01<00:03,  6.89it/s]Capturing CUDA graphs (decode, FULL):  26%|▎| 9/35 [00:01<00:03,  7.10it/s]Capturing CUDA graphs (decode, FULL):  29%|▎| 10/35 [00:01<00:03,  7.29it/sCapturing CUDA graphs (decode, FULL):  31%|▎| 11/35 [00:01<00:03,  7.46it/sCapturing CUDA graphs (decode, FULL):  34%|▎| 12/35 [00:01<00:03,  7.54it/sCapturing CUDA graphs (decode, FULL):  37%|▎| 13/35 [00:01<00:02,  7.42it/sCapturing CUDA graphs (decode, FULL):  40%|▍| 14/35 [00:02<00:03,  6.37it/sCapturing CUDA graphs (decode, FULL):  43%|▍| 15/35 [00:02<00:02,  6.83it/sCapturing CUDA graphs (decode, FULL):  46%|▍| 16/35 [00:02<00:02,  7.10it/sCapturing CUDA graphs (decode, FULL):  49%|▍| 17/35 [00:02<00:02,  6.25it/sCapturing CUDA graphs (decode, FULL):  51%|▌| 18/35 [00:02<00:02,  6.73it/sCapturing CUDA graphs (decode, FULL):  54%|▌| 19/35 [00:02<00:02,  7.12it/sCapturing CUDA graphs (decode, FULL):  57%|▌| 20/35 [00:03<00:02,  6.55it/sCapturing CUDA graphs (decode, FULL):  60%|▌| 21/35 [00:03<00:01,  7.09it/sCapturing CUDA graphs (decode, FULL):  63%|▋| 22/35 [00:03<00:01,  7.54it/sCapturing CUDA graphs (decode, FULL):  66%|▋| 23/35 [00:03<00:01,  7.86it/sCapturing CUDA graphs (decode, FULL):  69%|▋| 24/35 [00:03<00:01,  8.14it/sCapturing CUDA graphs (decode, FULL):  71%|▋| 25/35 [00:03<00:01,  8.40it/sCapturing CUDA graphs (decode, FULL):  74%|▋| 26/35 [00:03<00:01,  8.61it/sCapturing CUDA graphs (decode, FULL):  77%|▊| 27/35 [00:03<00:00,  8.71it/sCapturing CUDA graphs (decode, FULL):  80%|▊| 28/35 [00:03<00:00,  8.87it/sCapturing CUDA graphs (decode, FULL):  83%|▊| 29/35 [00:04<00:00,  9.03it/sCapturing CUDA graphs (decode, FULL):  86%|▊| 30/35 [00:04<00:00,  9.06it/sCapturing CUDA graphs (decode, FULL):  89%|▉| 31/35 [00:04<00:00,  9.10it/sCapturing CUDA graphs (decode, FULL):  91%|▉| 32/35 [00:04<00:00,  9.13it/sCapturing CUDA graphs (decode, FULL):  94%|▉| 33/35 [00:04<00:00,  7.75it/sCapturing CUDA graphs (decode, FULL):  97%|▉| 34/35 [00:04<00:00,  8.14it/sCapturing CUDA graphs (decode, FULL): 100%|█| 35/35 [00:04<00:00,  7.41it/s
+(EngineCore pid=8522) INFO 05-10 02:55:34 [gpu_model_runner.py:6133] Graph capturing finished in 15 secs, took 0.69 GiB
+(EngineCore pid=8522) INFO 05-10 02:55:34 [gpu_worker.py:599] CUDA graph pool memory: 0.69 GiB (actual), 0.49 GiB (estimated), difference: 0.19 GiB (28.1%).
+(EngineCore pid=8522) INFO 05-10 02:55:34 [core.py:299] init engine (profile, create kv cache, warmup model) took 53.92 s (compilation: 24.80 s)
+(EngineCore pid=8522) INFO 05-10 02:55:34 [kernel.py:205] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'])
+  Model loaded.
+[Phase 2] Building prompts and generating responses...
+Rendering prompts:   0%|                            | 0/20 [00:00<?, ?it/s]Rendering prompts: 100%|██████████████████| 20/20 [00:00<00:00, 601.55it/s]
+Processed prompts:   0%| | 0/20 [00:00<?, ?it/s, est. speed input: 0.00 tokProcessed prompts:   5%| | 1/20 [01:04<20:21, 64.31s/it, est. speed input: Processed prompts:  10%| | 2/20 [01:20<10:46, 35.91s/it, est. speed input: Processed prompts:  15%|▏| 3/20 [02:18<13:03, 46.09s/it, est. speed input: Processed prompts:  20%|▏| 4/20 [04:06<18:49, 70.61s/it, est. speed input: Processed prompts:  25%|▎| 5/20 [04:28<13:16, 53.09s/it, est. speed input: Processed prompts:  30%|▎| 6/20 [04:55<10:20, 44.30s/it, est. speed input: Processed prompts:  35%|▎| 7/20 [05:29<08:51, 40.90s/it, est. speed input: Processed prompts:  40%|▍| 8/20 [07:03<11:31, 57.66s/it, est. speed input: Processed prompts:  45%|▍| 9/20 [07:05<07:24, 40.39s/it, est. speed input: Processed prompts:  50%|▌| 10/20 [08:14<08:12, 49.24s/it, est. speed input:Processed prompts:  55%|▌| 11/20 [09:00<07:12, 48.01s/it, est. speed input:Processed prompts:  60%|▌| 12/20 [09:22<05:22, 40.30s/it, est. speed input:Processed prompts:  65%|▋| 13/20 [09:58<04:32, 38.93s/it, est. speed input:Processed prompts:  70%|▋| 14/20 [11:24<05:18, 53.12s/it, est. speed input:Processed prompts:  75%|▊| 15/20 [11:55<03:52, 46.52s/it, est. speed input:Processed prompts:  80%|▊| 16/20 [14:42<05:30, 82.64s/it, est. speed input:Processed prompts:  85%|▊| 17/20 [15:10<03:18, 66.21s/it, est. speed input:Processed prompts:  90%|▉| 18/20 [15:10<01:32, 46.37s/it, est. speed input:Processed prompts:  95%|▉| 19/20 [16:43<01:00, 60.44s/it, est. speed input:Processed prompts: 100%|█| 20/20 [18:01<00:00, 65.62s/it, est. speed input:Processed prompts: 100%|█| 20/20 [18:01<00:00, 65.62s/it, est. speed input:Processed prompts: 100%|█| 20/20 [18:01<00:00, 54.07s/it, est. speed input:
+/home/doterocaldwell/.local/lib/python3.11/site-packages/sympy/parsing/latex/_parse_latex_antlr.py:23: UserWarning: antlr4.error.ErrorListener module is not installed
+  ErrorListener = import_module('antlr4.error.ErrorListener',
+  Generated 20 responses
+[Phase 2] Scoring...
+Traceback (most recent call last):
+  File "/home/doterocaldwell/151B_SP26_Competition/phase2_test.py", line 124, in <module>
+    judger = Judger(strict_extract=False)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/doterocaldwell/151B_SP26_Competition/judger.py", line 30, in __init__
+    self.pi = parse_latex("\\pi")
+              ^^^^^^^^^^^^^^^^^^^
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sympy/parsing/latex/__init__.py", line 199, in parse_latex
+    return _latex.parse_latex(s, strict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/doterocaldwell/.local/lib/python3.11/site-packages/sympy/parsing/latex/_parse_latex_antlr.py", line 66, in parse_latex
+    raise ImportError("LaTeX parsing requires the antlr4 Python package,"
+ImportError: LaTeX parsing requires the antlr4 Python package, provided by pip (antlr4-python3-runtime) or conda (antlr-python-runtime), version 4.11
+(EngineCore pid=8522) INFO 05-10 03:13:36 [core.py:1238] Shutdown initiated (timeout=0)
+(EngineCore pid=8522) INFO 05-10 03:13:36 [core.py:1261] Shutdown complete

@@ -6,14 +6,15 @@ Runs inference on all 1,126 public questions, scores them, and logs errors for a
 """
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer
+from vllm import LLM, SamplingParams
 from tqdm import tqdm
 
 # Configuration
@@ -31,13 +32,8 @@ TEMPERATURE = 0.6
 TOP_P = 0.95
 TOP_K = 20
 
-# vLLM configuration
-GPU_MEMORY_UTIL = 0.50
-MAX_SEQ_LEN = 16384
-MAX_NUM_SEQS = 4
-MAX_BATCHED_TOKENS = 8192
-
-torch.cuda.set_device(int(GPU_ID))
+os.environ["CUDA_VISIBLE_DEVICES"] = GPU_ID
+os.environ["VLLM_USE_DEEP_GEMM"] = "0"
 
 # ─── Prompts ─────────────────────────────────────────────────────────────────
 SYSTEM_PROMPT_MATH = (
@@ -71,75 +67,44 @@ n_free = sum(not d.get("options") for d in data)
 print(f"Loaded {len(data)} questions ({n_mcq} MCQ, {n_free} free-form)")
 
 # ─── Load model ────────────────────────────────────────────────────────────────
-print("[Phase 1] Loading model with HuggingFace Transformers (INT4 BitsAndBytes)...")
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig
-
-tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
+print("[Phase 1] Loading model (vLLM, INT8 bitsandbytes)...")
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 tokenizer.pad_token = tokenizer.eos_token
 
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_compute_dtype=torch.bfloat16,
-    bnb_4bit_use_double_quant=True,
-)
-
-llm = AutoModelForCausalLM.from_pretrained(
-    MODEL_ID,
+llm = LLM(
+    model=MODEL_ID,
+    quantization="bitsandbytes",
+    load_format="bitsandbytes",
+    enable_prefix_caching=False,
+    gpu_memory_utilization=0.50,
+    max_model_len=16384,
     trust_remote_code=True,
-    quantization_config=bnb_config,
-    device_map="cuda",
+    max_num_seqs=4,
+    max_num_batched_tokens=8192,
 )
-print(f"Model loaded on GPU: {torch.cuda.get_device_name(0)}")
 
-# ─── Generate responses (batch inference with Transformers) ────────────────────
-print("[Phase 1] Generating responses (batched with Transformers)...")
-responses = {}
+sampling_params = SamplingParams(
+    max_tokens=MAX_TOKENS,
+    temperature=TEMPERATURE,
+    top_p=TOP_P,
+    top_k=TOP_K,
+    repetition_penalty=1.0,
+)
+print("Model loaded.")
 
-# Process in batches to manage memory
-batch_size = 4
-for batch_start in tqdm(range(0, len(data), batch_size), desc="Generating batches"):
-    batch_end = min(batch_start + batch_size, len(data))
-    batch_items = data[batch_start:batch_end]
+# ─── Generate responses ────────────────────────────────────────────────────────
+print("[Phase 1] Building prompts and generating responses...")
+prompts = []
+for item in data:
+    system, user = build_prompt(item["question"], item.get("options"))
+    prompts.append(tokenizer.apply_chat_template(
+        [{"role": "system", "content": system}, {"role": "user", "content": user}],
+        tokenize=False,
+        add_generation_prompt=True,
+    ))
 
-    # Build prompts for this batch
-    prompts = []
-    for item in batch_items:
-        system, user = build_prompt(item["question"], item.get("options"))
-        prompt_text = tokenizer.apply_chat_template(
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-        prompts.append(prompt_text)
-
-    # Tokenize
-    inputs = tokenizer(
-        prompts,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=MAX_SEQ_LEN,
-    ).to(llm.device)
-
-    # Generate
-    with torch.no_grad():
-        output_ids = llm.generate(
-            **inputs,
-            max_new_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            top_p=TOP_P,
-            top_k=TOP_K,
-            repetition_penalty=1.0,
-            do_sample=True,
-        )
-
-    # Decode responses (only new tokens)
-    for i, out in enumerate(output_ids):
-        new_tokens = out[inputs["input_ids"].shape[1]:]
-        response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
-        item_id = batch_items[i]["id"]
-        responses[item_id] = response
-
+outputs = llm.generate(prompts, sampling_params=sampling_params)
+responses = {data[i]["id"]: out.outputs[0].text.strip() for i, out in enumerate(outputs)}
 print(f"Generated {len(responses)} responses")
 
 # ─── Scoring ──────────────────────────────────────────────────────────────────
