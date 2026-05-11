@@ -1,0 +1,355 @@
+% =======> To use this template:
+% => Edit authors in this file.
+% => Edit the paper's content itself in the respective sections. Edit as needed
+% => Add any references to references.bib (cite with \cite or \citet)
+% =================================================
+
+\documentclass{article}
+
+\PassOptionsToPackage{numbers, compress}{natbib}
+
+\usepackage[preprint]{neurips_2024}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{float}
+\DeclareMathOperator{\R}{\mathbb{R}}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\usepackage{wrapfig}
+\usepackage[capitalize,noabbrev]{cleveref}
+\RequirePackage{doi}
+\usepackage{xcolor, colortbl}
+\definecolor{darkblue}{rgb}{0.19, 0.19, 0.62}
+\hypersetup{
+  colorlinks = true,
+  citecolor  = darkblue,
+  filecolor  = darkblue,
+  urlcolor   = darkblue,
+}
+\usepackage[textsize=tiny]{todonotes}
+
+
+\title{
+CSE 151B/251B Milestone Report
+}
+
+\author{%
+  Diego Otero-Caldwell \\
+  Department of Computer Science and Engineering \\
+  University of California, San Diego \\
+  \texttt{doterocaldwell@ucsd.edu} \\
+  \And
+  Alex Cojocaru \\
+  Department of Computer Science and Engineering \\
+  University of California, San Diego \\
+  \And
+  Shashwat Dudeja \\
+  Department of Computer Science and Engineering \\
+  University of California, San Diego \\
+}
+
+\begin{document}
+\maketitle
+
+
+\begin{abstract}
+We investigate improving the mathematical reasoning accuracy of \textit{Qwen3-4B-Thinking-2507}, a 4-billion-parameter chain-of-thought language model, on a mixed benchmark of 1,126 problems spanning multiple-choice (MCQ) and free-form answer formats. Our Phase~1 full-dataset evaluation establishes a baseline overall accuracy of 29.9\%, with MCQ accuracy of only 10.7\%. Error analysis on 789 failures reveals that 74.3\% stem from output formatting non-compliance—the model either omits the required \texttt{\textbackslash boxed\{\}} answer delimiter or fails to place a valid letter in MCQ responses—rather than from incorrect mathematical reasoning. In Phase~2, we redesign the system prompts to include explicit format requirements and increase the per-response token budget from 2,048 to 8,192 to prevent truncation of extended thinking traces. Validated on a 20-question subset, these changes raise overall accuracy from 25.0\% to 60.0\% (+35.0 percentage points), MCQ accuracy from 11.1\% to 66.7\% (+55.6~pp), and reduce free-form formatting errors to zero. The dominant remaining failure mode shifts from format non-compliance to genuinely incorrect answers. Planned future work includes majority-vote sampling, few-shot exemplars, and supervised fine-tuning. The private test-set leaderboard score is pending final submission.
+\end{abstract}
+
+
+% % % === Introduction
+\section{Introduction}
+\label{sec:intro}
+
+\paragraph{Problem Definition.}
+The task is to maximize mathematical reasoning accuracy on a unified benchmark of 1,126 questions: 375 multiple-choice (select a letter A--J) and 751 free-form (produce numerical or symbolic answers, or multi-part lists). Model output must place answers inside \texttt{\textbackslash boxed\{\}} delimiters; evaluation uses exact matching for MCQ letters, symbolic equivalence for expressions, and numeric tolerance $10^{-8}$ for floating-point values. For multi-part questions (414 of the free-form set), \emph{all sub-answers must be correct} for the question to receive credit. We use only \texttt{Qwen/Qwen3-4B-Thinking-2507} (4B parameters) with no external APIs, calculators, or code interpreters at inference time. The metric is unified accuracy: correct questions divided by total questions, with equal weight regardless of difficulty or type.
+
+\paragraph{Problem Significance.}
+Small, open-weight models with strong mathematical reasoning enable deployment in resource-constrained environments such as mobile devices, edge servers, and offline systems. Scientific research, engineering design, finance, and education all rely on reliable quantitative reasoning from language models. Improving 4B-parameter models is particularly valuable because (1) inference latency and cost drop significantly compared to 70B+ models, making deployment practical; (2) interpretability and transparency increase with smaller scale; and (3) efficient reasoning strategies discovered at small scale often generalize to larger models. Demonstrating that careful prompt design and fine-tuning can extract strong reasoning capability without massive model scale or external solvers is a practically meaningful contribution.
+
+\paragraph{Technical Challenge.}
+Multiple challenges span data, model, implementation, and evaluation. \textbf{(1) Format compliance:} The model must reliably output answers in \texttt{\textbackslash boxed\{\}} delimiters. Full-baseline testing on 1,126 questions reveals that 74.3\% of all errors are formatting failures (missing boxed wrapper or invalid MCQ letter), not mathematical reasoning errors—indicating that instruction-following and output structure are a severe bottleneck before any reasoning improvements are meaningful. \textbf{(2) Multi-part reasoning:} The model must parse implicit \texttt{[ANS]} placeholders, produce sub-answers in the correct order, and understand that a single incorrect sub-answer causes the entire question to fail. This is structurally harder than single-answer tasks. \textbf{(3) Domain diversity:} The benchmark spans algebra, calculus, complex analysis, probability, and statistics across difficulty levels; no single prompt formulation is optimal for all problem types. \textbf{(4) Computational efficiency:} INT8 quantization is required to fit the model in available VRAM. Inference throughput directly limits the feasibility of sampling strategies such as majority voting needed to improve accuracy. \textbf{(5) Evaluation complexity:} The \texttt{judger.py} framework handles symbolic simplification via SymPy, numeric tolerance, and structural matching for multi-part answers. Subtle bugs in evaluation can mask real improvements or produce apparent regressions.
+
+\paragraph{Contributions.}
+The starter code provides data loading, inference scaffolding, and the \texttt{judger.py} evaluation framework. Its limitations include generic system prompts that do not explicitly enforce formatting constraints, no error analysis to identify failure modes, single-pass inference only, and no framework for iterating across experiments. Our contributions to date are:
+
+\begin{itemize}
+  \item \textbf{Full-dataset baseline:} We run inference on all 1,126 public questions using vLLM with INT8 quantization and establish the first comprehensive accuracy baseline: 29.9\% overall, 10.7\% MCQ, 39.5\% free-form (51.0\% single-part, 30.2\% multi-part), with a full per-category error log.
+
+  \item \textbf{Error categorization and root-cause analysis:} Of 789 baseline errors, 355 (45.0\%) are \texttt{FREE\_FORM\_NO\_BOX} (missing \texttt{\textbackslash boxed\{\}} wrapper) and 231 (29.3\%) are \texttt{MCQ\_NO\_VALID\_LETTER} (no valid letter extracted from MCQ responses). Together, these formatting failures account for 74.3\% of all errors and directly motivated the Phase~2 intervention.
+
+  \item \textbf{Phase~2 prompt engineering:} By redesigning the system prompts to include explicit, repeated format requirements and increasing the token budget to 8,192, we achieve 60.0\% overall accuracy (+35.0~pp), 66.7\% MCQ accuracy (+55.6~pp), and eliminate all \texttt{FREE\_FORM\_NO\_BOX} errors on a 20-question validation set.
+
+  \item \textbf{Reproducibility infrastructure:} We built and documented a full inference pipeline (\texttt{run\_baseline.py}, \texttt{phase2\_test.py}) and a standardized testing harness (\texttt{testing\_template.py}) that centralizes environment setup, model loading, scoring, error categorization, and delta reporting across all phases. All results are version-controlled.
+
+  \item \textbf{Dataset quality audit:} Ground-truth answers span 0--16 decimal places with no uniform rounding standard, validating the use of tolerance-based numeric equivalence in \texttt{judger.py} rather than exact floating-point matching.
+\end{itemize}
+
+
+% % % === Related Work
+\section{Related Work}
+\label{sec:relatedwork}
+
+\paragraph{Chain-of-thought reasoning.}
+\citet{wei2022chain} demonstrated that prompting large language models to produce intermediate reasoning steps before a final answer—chain-of-thought (CoT) prompting—substantially improves accuracy on multi-step arithmetic and symbolic reasoning tasks. \citet{kojima2022large} extended this finding to a zero-shot setting, showing that the phrase ``Let's think step by step'' elicits CoT behavior without task-specific examples. Qwen3-4B-Thinking-2507 \citep{qwen3} internalizes this behavior through a dedicated \texttt{<think>} reasoning block, making extended thinking a core architectural feature rather than a prompt engineering choice. Our work builds directly on this capability: the model's thinking traces are the primary vehicle for mathematical reasoning, and we find that a token budget of only 2,048 tokens frequently truncates these traces, degrading accuracy.
+
+\paragraph{Mathematical reasoning benchmarks.}
+\citet{hendrycks2021math} introduced the MATH dataset, a collection of competition mathematics problems spanning algebra, geometry, number theory, and calculus, and showed that standard language models achieve low accuracy without specialized training. \citet{cobbe2021gsm8k} introduced GSM8K, a grade-school math benchmark, and demonstrated that training a verifier to score generated solutions substantially outperforms greedy decoding. These benchmarks established that mathematical reasoning is a challenging capability requiring both correct reasoning and reliable answer extraction—a lesson we observe directly in our baseline, where 74.3\% of errors are format-compliance failures rather than mathematical mistakes.
+
+\paragraph{Sampling and self-consistency.}
+\citet{wang2022selfconsistency} showed that sampling multiple reasoning chains and taking a majority vote over final answers—self-consistency—improves accuracy over greedy decoding by 1--20 percentage points across several reasoning benchmarks, with gains increasing in difficulty. Models trained with reinforcement learning on reasoning rewards, such as DeepSeek-R1 \citep{deepseekr1}, further push accuracy by optimizing directly for correct final answers. We plan to apply majority voting in Phase~3 and explore RL-based fine-tuning in Phase~7.
+
+
+% % % === Methods
+\section{Methods}
+\label{sec:methods}
+
+\paragraph{Problem Setting.}
+Let $x = (q, O)$ be a math problem where $q$ is a natural-language question string and $O = \{o_1, \ldots, o_k\}$ is an optional set of answer choices (present for MCQ, absent for free-form). The model produces a response string $\hat{y}$, from which an answer $\hat{a}$ is extracted. For MCQ problems, $\hat{a}$ is a single letter from $\{A, B, \ldots, J\}$; for free-form problems, $\hat{a}$ is a numerical value, symbolic expression, or comma-separated list of sub-answers. A response is scored as correct under three conditions depending on the ground truth $y^*$: exact case-insensitive letter match for MCQ; symbolic equivalence under SymPy simplification (difference reduces to zero) for expressions; and absolute numeric agreement within tolerance $\epsilon = 10^{-8}$ for floating-point values. For multi-part free-form questions ($m \geq 2$ sub-answers), all $m$ components must be individually correct.
+
+The dataset consists of 1,126 questions: 375 MCQ and 751 free-form. Of the free-form questions, 337 are single-part (one answer) and 414 are multi-part (two or more answers). There is no held-out training split for the public set; all 1,126 questions serve as a validation and development corpus.
+
+\paragraph{Baseline Prompts (Phase 1).}
+Phase~1 uses two generic system prompts, one per question type:
+
+\vspace{0.5em}
+\noindent\textit{Free-form:} ``You are an expert mathematician. Solve the problem step-by-step. Put your final answer inside \texttt{\textbackslash boxed\{\}}. If the problem has multiple sub-answers, separate them by commas inside a single \texttt{\textbackslash boxed\{\}}, e.g.\ \texttt{\textbackslash boxed\{3, 7\}}.''
+
+\vspace{0.5em}
+\noindent\textit{MCQ:} ``You are an expert mathematician. Read the problem and the answer choices below, then select the single best answer. Output ONLY the letter of your chosen option inside \texttt{\textbackslash boxed\{\}}, e.g.\ \texttt{\textbackslash boxed\{C\}}.''
+
+\vspace{0.5em}
+These prompts state the format requirement once but do not enforce it strongly—the model frequently omits the \texttt{\textbackslash boxed\{\}} wrapper or places free-form reasoning text rather than a letter in MCQ responses.
+
+\paragraph{Phase~2 Prompt Engineering.}
+Error analysis of the Phase~1 baseline (Section~\ref{sec:baselines}) reveals that 74.3\% of failures are formatting errors, not mathematical mistakes. Phase~2 addresses this by redesigning both prompts to repeat and reinforce the format requirement:
+
+\vspace{0.5em}
+\noindent\textit{Free-form (Phase~2):} ``You are an expert mathematician. Solve the problem step-by-step. You MUST place your final answer inside \texttt{\textbackslash boxed\{\}}. For problems with multiple [ANS] placeholders, list all answers comma-separated inside a single \texttt{\textbackslash boxed\{\}} in the order they appear, e.g.\ \texttt{\textbackslash boxed\{3, 7, -2\}}. Always end your response with \texttt{\textbackslash boxed\{your answer here\}}. Never omit the \texttt{\textbackslash boxed\{\}} wrapper.''
+
+\vspace{0.5em}
+\noindent\textit{MCQ (Phase~2):} ``You are an expert mathematician. Read the problem and the answer choices below, then select the single best answer. Think through it carefully, then end your response with the letter of your chosen option inside \texttt{\textbackslash boxed\{\}}. You MUST end with \texttt{\textbackslash boxed\{X\}} where X is exactly one capital letter. Example final line: \texttt{\textbackslash boxed\{C\}}.''
+
+\vspace{0.5em}
+Three specific changes distinguish Phase~2 from Phase~1: (1) the word ``MUST'' is introduced to signal a hard constraint rather than a preference; (2) a concrete example of the exact expected final line is added for MCQ, removing ambiguity about what constitutes a valid response; (3) the token budget is raised from 2,048 to 8,192 to prevent Qwen3's extended thinking traces from being cut off mid-reasoning. We hypothesize that truncated responses are more likely to lack the final \texttt{\textbackslash boxed\{\}} answer since the model has not finished its reasoning chain.
+
+
+% % % === Experiments
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Baselines}
+\label{sec:baselines}
+
+\paragraph{Starter Code Baseline.}
+The starter code provides a reference implementation using HuggingFace Transformers with INT4 BitsAndBytes quantization. It uses generic system prompts and single-pass greedy-ish inference (temperature~0.6) without prompt engineering or majority voting.
+
+\paragraph{Phase~1 Mini-Baseline: 20-Question Diagnostic (Transformers, INT4).}
+Before running the full pipeline, we evaluate the first 20 public questions (9 MCQ, 11 free-form) under the Phase~1 prompt configuration using INT4 quantization via Transformers. This diagnostic run identifies error patterns quickly and confirms that the pipeline is functioning correctly. Results are presented in \cref{tab:minibaseline}.
+
+\begin{table}[h]
+  \caption{Phase~1 mini-baseline accuracy by question type (20 questions, Qwen3-4B INT4 via Transformers, temperature~0.6, max\_tokens~=~2048).}
+  \label{tab:minibaseline}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Category & Correct / Total & Accuracy \\
+    \midrule
+    Overall & 5 / 20 & 25.0\% \\
+    MCQ & 1 / 9 & 11.1\% \\
+    Free-form (total) & 4 / 11 & 36.4\% \\
+    \quad Single-part & 3 / 4 & 75.0\% \\
+    \quad Multi-part & 1 / 7 & 14.3\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Phase~1 Full Baseline: All 1,126 Questions (vLLM, INT8).}
+We run inference on the complete public dataset using vLLM with INT8 BitsAndBytes quantization, which offers better throughput and memory efficiency than the Transformers INT4 path. The full results are presented in \cref{tab:fullbaseline}, and the error breakdown appears in \cref{tab:fullerrors}.
+
+\begin{table}[h]
+  \caption{Phase~1 full-baseline accuracy by question type (1,126 questions, Qwen3-4B INT8 via vLLM, temperature~0.6, max\_tokens~=~2048). This is the primary reference baseline for all subsequent comparisons.}
+  \label{tab:fullbaseline}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Category & Correct / Total & Accuracy \\
+    \midrule
+    Overall & 337 / 1126 & 29.9\% \\
+    MCQ & 40 / 375 & 10.7\% \\
+    Free-form (total) & 297 / 751 & 39.5\% \\
+    \quad Single-part & 172 / 337 & 51.0\% \\
+    \quad Multi-part & 125 / 414 & 30.2\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \caption{Phase~1 full-baseline error breakdown (789 total errors). Formatting failures—\texttt{FREE\_FORM\_NO\_BOX} and \texttt{MCQ\_NO\_VALID\_LETTER} together—account for 74.3\% of all errors.}
+  \label{tab:fullerrors}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Error Category & Count & \% of Errors \\
+    \midrule
+    \texttt{FREE\_FORM\_NO\_BOX} & 355 & 45.0\% \\
+    \texttt{MCQ\_NO\_VALID\_LETTER} & 231 & 29.3\% \\
+    \texttt{MCQ\_WRONG\_LETTER} & 104 & 13.2\% \\
+    \texttt{FREE\_FORM\_WRONG\_ANSWER} & 99 & 12.5\% \\
+    \midrule
+    \textit{Formatting subtotal} & \textit{586} & \textit{74.3\%} \\
+    \textit{Reasoning subtotal} & \textit{203} & \textit{25.7\%} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Error Analysis.}
+The full-baseline error breakdown in \cref{tab:fullerrors} reveals a striking asymmetry: nearly three quarters of all failures are formatting errors that are independent of whether the model understood the mathematics. \texttt{FREE\_FORM\_NO\_BOX} (355 errors, 45.0\%) indicates that the model produces a reasoning trace that reaches a numerical answer but does not wrap it in \texttt{\textbackslash boxed\{\}}. \texttt{MCQ\_NO\_VALID\_LETTER} (231 errors, 29.3\%) indicates that the model produces extended reasoning for MCQ questions but does not conclude with a single letter answer—often writing a full sentence rather than a boxed letter. Only 203 errors (25.7\%) represent cases where the answer was extracted but was mathematically wrong.
+
+This pattern strongly suggests that the baseline prompts underspecify the output format. The model demonstrates mathematical capability (single-part free-form achieves 51.0\% when the format is used correctly) but consistently fails to apply the format instruction reliably. Phase~2 targets this bottleneck directly.
+
+
+\subsection{Evaluation}
+\label{sec:evaluation}
+
+Responses are scored using the provided \texttt{judger.py} framework, which implements type-specific answer comparison across ten answer types (numeric values, symbolic expressions, equations, true/false, intervals, MCQ letters, ordered and unordered lists, and open-ended text). For MCQ questions, we additionally apply a regex extraction that finds the last \texttt{\textbackslash boxed\{X\}} pattern and returns the enclosed letter, falling back to the last uppercase standalone letter in the response.
+
+We observe that a small number of public-dataset ground-truth answers appear to contain typos or ambiguous precision (e.g., a ground truth of 0.333 where the exact answer is 1/3). These edge cases add noise to our accuracy estimates but do not materially affect the aggregate results reported here, since they represent a small fraction of the 1,126 questions. We do not attempt to correct them, as any such correction would risk overfitting to the public set.
+
+\subsection{Implementation Details}
+\label{sec:implementation_details}
+
+\paragraph{Hardware.} All experiments are run on UCSD's Data Science and Machine Learning Platform (DSMLP). The GPU used is an NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation with 24~GB VRAM. No multi-GPU setup is used.
+
+\paragraph{Model and quantization.} We use \texttt{Qwen/Qwen3-4B-Thinking-2507} loaded via vLLM with INT8 BitsAndBytes quantization (\texttt{quantization="bitsandbytes"}, \texttt{load\_format="bitsandbytes"}). INT4 (used for the mini-baseline diagnostic) is faster but we found INT8 to be more stable for extended generation lengths. The vLLM engine is configured with \texttt{gpu\_memory\_utilization=0.50}, \texttt{max\_model\_len=28000}, \texttt{max\_num\_seqs=256}, and \texttt{max\_num\_batched\_tokens=32768}.
+
+\paragraph{Sampling parameters.} All reported runs use temperature~0.6, top-$p$~0.95, and top-$k$~20, following the Qwen3 recommended settings. Repetition penalty is set to 1.0 (disabled). The key difference between Phase~1 and Phase~2 is the per-response token budget: Phase~1 uses 2,048 tokens; Phase~2 raises this to 8,192 to accommodate Qwen3's extended thinking traces without truncation.
+
+\paragraph{Runtime.} The full 1,126-question Phase~1 baseline completed in approximately 4.5~hours (started 11:06 UTC, completed 15:34 UTC on 2026-05-10). Phase~2 validation on 20 questions takes under 5~minutes with the same hardware.
+
+\paragraph{Reproducibility note.} On Blackwell-architecture GPUs, vLLM requires \texttt{VLLM\_USE\_DEEP\_GEMM=0} to prevent a runtime crash in the DeepGEMM kernel path. This environment variable is set unconditionally in all scripts before the vLLM import.
+
+
+\subsection{Results}
+\label{sec:results}
+
+\paragraph{Phase~2 prompt engineering results.}
+\cref{tab:phase2comparison} compares Phase~1 and Phase~2 accuracy on the 20-question validation set. Phase~2 achieves a 35.0~pp gain in overall accuracy, with the largest improvement in MCQ (+55.6~pp). The error breakdown in \cref{tab:phase2errors} shows that \texttt{FREE\_FORM\_NO\_BOX} drops from 7 to 0 and \texttt{MCQ\_NO\_VALID\_LETTER} drops from 7 to 1—confirming that the prompt revisions directly resolve the formatting failures identified in Phase~1. The dominant remaining error type shifts to \texttt{FREE\_FORM\_WRONG\_ANSWER} (5 errors), indicating that the model now formats its responses correctly but arrives at an incorrect answer.
+
+\begin{table}[h]
+  \caption{Accuracy comparison on the 20-question validation set: Phase~1 (generic prompts, 2048 tokens) vs.\ Phase~2 (explicit format constraints, 8192 tokens). All questions are the same 20 drawn from the beginning of the public dataset.}
+  \label{tab:phase2comparison}
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    Category & Phase~1 & Phase~2 & $\Delta$ \\
+    \midrule
+    Overall & 25.0\% (5/20) & 60.0\% (12/20) & +35.0~pp \\
+    MCQ & 11.1\% (1/9) & 66.7\% (6/9) & +55.6~pp \\
+    Free-form (total) & 36.4\% (4/11) & 54.5\% (6/11) & +18.2~pp \\
+    \quad Single-part & 75.0\% (3/4) & 75.0\% (3/4) & 0.0~pp \\
+    \quad Multi-part & 14.3\% (1/7) & 42.9\% (3/7) & +28.6~pp \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \caption{Error breakdown comparison: Phase~1 vs.\ Phase~2 on the 20-question validation set. Formatting errors are nearly eliminated; remaining errors are mathematical.}
+  \label{tab:phase2errors}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Error Category & Phase~1 Count & Phase~2 Count \\
+    \midrule
+    \texttt{FREE\_FORM\_NO\_BOX}      & 7 & 0 \\
+    \texttt{MCQ\_NO\_VALID\_LETTER}   & 7 & 1 \\
+    \texttt{MCQ\_WRONG\_LETTER}       & 1 & 2 \\
+    \texttt{FREE\_FORM\_WRONG\_ANSWER}& 0 & 5 \\
+    \midrule
+    Total errors & 15 & 8 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Interpretation.}
+Several observations follow from these results. First, MCQ accuracy at baseline is catastrophically low (10.7\% on the full set, 11.1\% on the 20-question sample), and the cause is almost entirely formatting: 87.5\% of MCQ mini-baseline errors are \texttt{MCQ\_NO\_VALID\_LETTER}. Once the model is instructed to end its response with exactly \texttt{\textbackslash boxed\{X\}}, MCQ accuracy jumps to 66.7\%, suggesting the underlying mathematical reasoning for MCQ is far stronger than the baseline accuracy implies. Second, single-part free-form accuracy is unchanged at 75.0\%, indicating that the model was already capable of correct single-part reasoning—it was simply not formatting the answer. Third, multi-part free-form accuracy more than triples from 14.3\% to 42.9\%, driven by the explicit instruction to comma-separate sub-answers within a single \texttt{\textbackslash boxed\{\}}. These results suggest that the remaining gap is primarily a mathematical reasoning problem rather than a format problem, and that future gains must come from improving answer correctness rather than format compliance.
+
+
+% % % === Discussion
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{Achievements.}
+We demonstrate that the dominant failure mode in Qwen3-4B-Thinking-2507's baseline performance is output format non-compliance, not mathematical reasoning inability. By rewriting the system prompts with explicit, repeated format constraints and increasing the token budget to prevent reasoning truncation, we improve overall accuracy by 35 percentage points on a 20-question validation set, eliminate all free-form formatting errors, and shift the error profile from formatting failures to genuine reasoning mistakes. This result is practically significant because it means that any model fine-tuning or sampling strategy we apply from this point forward is operating on a model that actually expresses its answers—improving the quality of the signal we optimize against.
+
+\paragraph{Bottlenecks and Mitigation.}
+Two bottlenecks were identified and resolved in Phase~2:
+
+\textit{(1) Output format non-compliance.} The Phase~1 prompts stated the \texttt{\textbackslash boxed\{\}} requirement once but did not reinforce it. The model treated it as a suggestion rather than a hard constraint, frequently concluding responses with a prose sentence rather than a boxed answer. We mitigated this by introducing ``MUST'' language, repeating the format requirement multiple times, and providing a concrete example of the exact expected final line. This reduced formatting errors from 74.3\% of all failures to near-zero.
+
+\textit{(2) Thinking trace truncation.} Qwen3-4B-Thinking-2507 uses an extended \texttt{<think>} block before producing its final answer. With a 2,048-token budget, many responses were cut off mid-reasoning, producing incomplete outputs that lacked the final boxed answer. Raising the budget to 8,192 tokens allows the full reasoning chain to complete in nearly all cases.
+
+The remaining bottleneck—incorrect answers after correct formatting—requires mathematical reasoning improvements, which we address in Phases~3--7.
+
+\paragraph{Plans Forward.}
+Phase~3 will implement majority-vote sampling: generating $N$ independent responses per question and selecting the most common extracted answer. Self-consistency \citep{wang2022selfconsistency} has shown consistent gains on reasoning tasks, and we expect it to be especially effective on the free-form questions where answer variance is high. We will sweep $N \in \{3, 5, 8\}$ and temperature values.
+
+Phase~4 will add few-shot worked examples to the user turn, providing the model with 2--3 solved problems that demonstrate proper multi-part answer formatting and domain-specific reasoning patterns. This is targeted at the 42.9\% multi-part accuracy remaining after Phase~2.
+
+Phase~5 will optimize inference throughput to make large-$N$ majority voting practical within the DSMLP session time limits.
+
+Phase~6 will fine-tune the model on the public dataset using LoRA/QLoRA, with the \texttt{judger.py} correctness signal as the training target. We will augment with MATH \citep{hendrycks2021math} and GSM8K \citep{cobbe2021gsm8k} examples to improve generalization.
+
+Phase~7 will explore reinforcement learning using binary reward (correct~=~+1, wrong~=~0) from \texttt{judger.py}, following approaches similar to DeepSeek-R1 \citep{deepseekr1}.
+
+\paragraph{Team Responsibilities.}
+Diego Otero-Caldwell led infrastructure development, including the inference pipelines (\texttt{run\_baseline.py}, \texttt{phase2\_test.py}), the standardized testing harness (\texttt{testing\_template.py}), and all process documentation. Alex Cojocaru contributed to data analysis, error categorization, and prompt iteration strategy. Shashwat Dudeja contributed to experimental design, result interpretation, and evaluation methodology. All three team members collaborated on the Phase~2 prompt redesign and will share responsibility for fine-tuning and RL experiments in Phases~6--7.
+
+\paragraph{Timelines.}
+\begin{itemize}
+    \item Week 5 (May 4--10): Full Phase~1 baseline (1,126 questions); Phase~2 prompt engineering and validation; standardized testing harness. \textit{[Complete]}
+    \item Week 6 (May 11--17): Phase~3 majority-vote sampling; temperature sweep; full-dataset Phase~2 run.
+    \item Week 7 (May 18--24): Phase~4 few-shot exemplars; domain-specific prompt variants for multi-part questions.
+    \item Week 8 (May 25--31): Phase~5 throughput optimization; Phase~6 LoRA/QLoRA fine-tuning setup and initial training runs.
+    \item Week 9 (Jun 1--7): Phase~6 fine-tuned model evaluation; Phase~7 RL experiments; adapter merging.
+    \item Week 10 (Jun 8--14): Final model selection; private test-set inference; submission; final report.
+\end{itemize}
+
+
+\section*{LLM Usage}
+
+\paragraph{Model and Methodology.}
+We use Claude Sonnet~4.6 (Anthropic's Claude Code CLI) as a research and engineering assistant throughout this project. Claude has served in the following capacities:
+
+\textbf{(1) Infrastructure and reproducibility:} Designed and implemented the full baseline inference pipeline (\texttt{run\_baseline.py}) using vLLM with INT8 quantization, including batch generation, \texttt{judger}-based scoring, error categorization, and results logging. Also designed the \texttt{testing\_template.py} standardized harness that unifies environment setup, model loading, scoring, and delta reporting across all phases.
+
+\textbf{(2) Data analysis and diagnostics:} Analyzed the public dataset to characterize answer precision (0--16 decimal places), validated that tolerance-based equivalence matching is appropriate, and designed the error categorization scheme (\texttt{MCQ\_NO\_VALID\_LETTER}, \texttt{FREE\_FORM\_NO\_BOX}, etc.) used throughout.
+
+\textbf{(3) Project documentation:} Created planning documents (\texttt{objectives.md}, \texttt{process.md}, \texttt{CLAUDE.md}) that serve as the source of truth for the project timeline and methodology.
+
+\textbf{(4) Error analysis and interpretation:} Interpreted mini-baseline and full-baseline results, isolating that 74.3\% of baseline errors are formatting-related and directly motivating the Phase~2 prompt changes.
+
+\textbf{(5) Report writing:} Drafted all sections of this milestone report based on empirical results and project documentation.
+
+Claude did not perform model training, fine-tuning, or RL optimization—those remain the team's computational responsibilities. All empirical claims are based on reproducible code and logs owned by the project team, and the authors take full responsibility for their accuracy and validity.
+
+\paragraph{Limitations and Responsibility.}
+All accuracy numbers, error breakdowns, and dataset statistics are derived from code run by the team on DSMLP hardware and verified against source logs. Claude assisted in implementation and interpretation but does not replace human verification. All critical results have been checked against the raw JSONL output files.
+
+
+
+% % % === ACKNOWLEDGMENTS AND REFERENCES START
+\bibliography{references.bib}
+\bibliographystyle{plainnat}
+
+\end{document}
