@@ -89,6 +89,13 @@ class Config:
     # Prepended to the user turn when non-empty. See _build_few_shot_prefix().
     few_shot_examples: list[dict] = field(default_factory=list)
 
+    # ── Checkpointing (for long runs on DSMLP) ────────────────────────────────
+    # checkpoint_every=N flushes scored results to disk every N questions so a
+    # crash or pod expiration doesn't lose all progress.
+    # resume=True skips already-processed IDs found in existing output files.
+    checkpoint_every: int = 0
+    resume: bool = False
+
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 # These are the Phase 2 prompts (best known so far). Edit here to iterate.
@@ -452,6 +459,35 @@ def print_results(summary: dict, cfg: Config) -> None:
     print("=" * width)
 
 
+# ── Checkpoint helpers ────────────────────────────────────────────────────────
+
+def _write_jsonl(path: str, records: list[dict], mode: str = "w") -> None:
+    with open(path, mode) as f:
+        for r in records:
+            f.write(json.dumps(r) + "\n")
+
+
+def load_existing_results(cfg: Config) -> tuple[list[dict], list[dict], set[int]]:
+    """Read any existing checkpoint files; return (results, errors, processed_ids)."""
+    prefix = cfg.results_dir / cfg.phase
+    results: list[dict] = []
+    errors:  list[dict] = []
+    for path, container in [(f"{prefix}_results.jsonl", results),
+                             (f"{prefix}_errors.jsonl",  errors)]:
+        p = Path(path)
+        if p.exists():
+            with open(p) as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        container.append(json.loads(line))
+    processed_ids = {r["id"] for r in results}
+    if processed_ids:
+        print(f"[{cfg.phase}] Resuming: {len(processed_ids)} questions already done, "
+              f"{len(errors)} errors logged")
+    return results, errors, processed_ids
+
+
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def parse_args() -> argparse.Namespace:
@@ -472,6 +508,10 @@ def parse_args() -> argparse.Namespace:
                         help="Sampling temperature (default: 0.6)")
     parser.add_argument("--max-tokens", type=int, default=8192, dest="max_tokens",
                         help="Max new tokens per response (default: 8192)")
+    parser.add_argument("--checkpoint-every", type=int, default=0, dest="checkpoint_every",
+                        help="Flush results to disk every N questions (0=all at once; recommended: 200)")
+    parser.add_argument("--resume", action="store_true",
+                        help="Skip already-processed IDs from existing output files (crash recovery)")
     return parser.parse_args()
 
 
@@ -481,22 +521,64 @@ def main() -> None:
     args = parse_args()
 
     cfg = Config(
-        phase      = args.phase,
-        compare_to = args.compare or [],
-        n_questions= 0 if args.full else args.n,   # 0 = all questions
-        gpu_id     = args.gpu,
-        n_samples  = args.samples,
-        temperature= args.temp,
-        max_tokens = args.max_tokens,
+        phase            = args.phase,
+        compare_to       = args.compare or [],
+        n_questions      = 0 if args.full else args.n,
+        gpu_id           = args.gpu,
+        n_samples        = args.samples,
+        temperature      = args.temp,
+        max_tokens       = args.max_tokens,
+        checkpoint_every = args.checkpoint_every,
+        resume           = args.resume,
     )
 
-    data = load_data(cfg)
+    all_data = load_data(cfg)
     llm, tokenizer, sampling_params = load_model(cfg)
-    responses = generate(data, llm, tokenizer, sampling_params, cfg)
-    results, errors = score(data, responses, cfg)
-    summary = compute_summary(results, errors, cfg)
-    save_results(results, errors, summary, cfg)
-    print_results(summary, cfg)
+
+    if cfg.checkpoint_every > 0 or cfg.resume:
+        # ── Chunked path: flush after every checkpoint_every questions ────────
+        cfg.results_dir.mkdir(parents=True, exist_ok=True)
+        prefix = str(cfg.results_dir / cfg.phase)
+
+        all_results, all_errors, processed_ids = load_existing_results(cfg)
+        todo = [d for d in all_data if d["id"] not in processed_ids]
+        print(f"[{cfg.phase}] {len(todo)} questions remaining "
+              f"({len(processed_ids)} already done)")
+
+        chunk_size  = cfg.checkpoint_every if cfg.checkpoint_every > 0 else len(todo)
+        fresh_start = not cfg.resume  # overwrite existing files on a clean run
+
+        for chunk_idx, start in enumerate(range(0, len(todo), chunk_size)):
+            chunk = todo[start : start + chunk_size]
+            end   = min(start + chunk_size, len(todo))
+            print(f"\n[{cfg.phase}] Chunk {start + 1}–{end} / {len(todo)}")
+
+            responses_chunk              = generate(chunk, llm, tokenizer, sampling_params, cfg)
+            chunk_results, chunk_errors  = score(chunk, responses_chunk, cfg)
+
+            # First chunk of a fresh (non-resume) run: overwrite; all others: append
+            file_mode = "w" if (fresh_start and chunk_idx == 0) else "a"
+            _write_jsonl(f"{prefix}_results.jsonl", chunk_results, mode=file_mode)
+            _write_jsonl(f"{prefix}_errors.jsonl",  chunk_errors,  mode=file_mode)
+
+            all_results.extend(chunk_results)
+            all_errors.extend(chunk_errors)
+            n_correct = sum(r["correct"] for r in all_results)
+            print(f"[{cfg.phase}] Checkpoint saved — {len(all_results)} done, "
+                  f"{n_correct} correct ({n_correct / len(all_results) * 100:.1f}%)")
+
+        summary = compute_summary(all_results, all_errors, cfg)
+        with open(f"{prefix}_summary.json", "w") as f:
+            json.dump(summary, f, indent=2)
+        print_results(summary, cfg)
+
+    else:
+        # ── Single-shot path (default for mini-batch runs) ────────────────────
+        responses = generate(all_data, llm, tokenizer, sampling_params, cfg)
+        results, errors = score(all_data, responses, cfg)
+        summary = compute_summary(results, errors, cfg)
+        save_results(results, errors, summary, cfg)
+        print_results(summary, cfg)
 
 
 if __name__ == "__main__":

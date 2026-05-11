@@ -210,6 +210,53 @@ LD_LIBRARY_PATH=.venv/lib/python3.13/site-packages/torchvision.libs:$LD_LIBRARY_
 
 **Timeline:** Complete 2026-05-10
 
+### 2.5 Phase 2 Full Dataset Validation (1,126 questions)
+
+**Goal:** Confirm that the Phase 2 prompt improvements observed on the 20-question sample hold at scale across all 1,126 public questions.
+
+**Script:** `run_phase2_full.sh` → `testing_template.py`
+
+**Command:**
+```bash
+# Inside a tmux session (see docs/dsmlp-long-jobs.md):
+bash run_phase2_full.sh
+
+# Resume if interrupted:
+bash run_phase2_full.sh --resume
+```
+
+**Configuration (identical to Phase 2 sample except where noted):**
+
+| Parameter | Value |
+|-----------|-------|
+| `phase` | `phase2_full` |
+| `max_tokens` | 8192 |
+| `temperature` | 0.6, `top_p` 0.95, `top_k` 20 |
+| `checkpoint_every` | 200 (flushes results every 200 questions) |
+| Dataset | Full `public.jsonl` (1,126 questions) |
+
+**Job-alive strategy:** tmux + `--checkpoint-every 200` (see `docs/dsmlp-long-jobs.md`)
+
+**Launched:** 2026-05-11
+
+**Status:** Running
+
+**Outputs (when complete):**
+- `results/phase2_full_results.jsonl`
+- `results/phase2_full_errors.jsonl`
+- `results/phase2_full_summary.json`
+- Log: `logs/phase2_full_run.log`
+
+**Results:** *(to be filled in after run completes)*
+
+| Metric | Phase 1 Full (1126q) | Phase 2 Sample (20q) | Phase 2 Full (1126q) |
+|--------|---------------------|---------------------|---------------------|
+| Overall Accuracy | 29.9% | 60.0% | TBD |
+| MCQ Accuracy | 10.7% | 66.7% | TBD |
+| Free-form Accuracy | 39.5% | 54.5% | TBD |
+| Single-part Free-form | 51.0% | 75.0% | TBD |
+| Multi-part Free-form | 30.2% | 42.9% | TBD |
+
 ---
 
 ## Infrastructure: Standardized Testing Harness (Complete)
@@ -398,14 +445,21 @@ python testing_template.py --phase phase3_mv8 --samples 8
 - **Free-form accuracy:** 54.5% (6/11) — single-part 75.0%, multi-part 42.9%
 - **Dominant errors:** `FREE_FORM_WRONG_ANSWER` (5), `MCQ_WRONG_LETTER` (2)
 
+### Phase 2 Full Dataset Results (1,126 questions — 2026-05-11)
+*(to be filled in after run completes)*
+- **Overall accuracy:** TBD
+- **MCQ accuracy:** TBD
+- **Free-form accuracy:** TBD — single-part TBD, multi-part TBD
+- **Dominant errors:** TBD
+
 ### Improvements Summary
 | Phase | Sample | Overall | MCQ | Free-form |
 |-------|--------|---------|-----|-----------|
 | Phase 1 full baseline | 1,126 | 29.9% | 10.7% | 39.5% |
 | Phase 2 (prompt fixes) | 20 | 60.0% | 66.7% | 54.5% |
-| **Delta (20-q sample)** | 20 | **+35.0pp** | **+55.6pp** | **+18.1pp** |
+| **Phase 2 full dataset** | 1,126 | **TBD** | **TBD** | **TBD** |
 
-> Note: Phase 2 was validated on the same 20-question mini-sample. The full-dataset Phase 2 run is pending.
+> Phase 2 full run launched 2026-05-11 with tmux + checkpoint-every-200. Update table when `results/phase2_full_summary.json` is written.
 
 ---
 
