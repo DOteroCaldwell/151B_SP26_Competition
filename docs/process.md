@@ -214,15 +214,15 @@ LD_LIBRARY_PATH=.venv/lib/python3.13/site-packages/torchvision.libs:$LD_LIBRARY_
 
 **Goal:** Confirm that the Phase 2 prompt improvements observed on the 20-question sample hold at scale across all 1,126 public questions.
 
-**Script:** `run_phase2_full.sh` → `testing_template.py`
+**Script:** `scripts/run_phase2_full.sh` → `testing_template.py`
 
 **Command:**
 ```bash
 # Inside a tmux session (see docs/dsmlp-long-jobs.md):
-bash run_phase2_full.sh
+bash scripts/run_phase2_full.sh
 
 # Resume if interrupted:
-bash run_phase2_full.sh --resume
+bash scripts/run_phase2_full.sh --resume
 ```
 
 **Configuration (identical to Phase 2 sample except where noted):**
@@ -237,25 +237,44 @@ bash run_phase2_full.sh --resume
 
 **Job-alive strategy:** tmux + `--checkpoint-every 200` (see `docs/dsmlp-long-jobs.md`)
 
-**Launched:** 2026-05-11
+**Launched:** 2026-05-11 05:10 UTC
 
-**Status:** Running
+**Status:** Complete (2026-05-11 10:36 UTC, ~5.5 hours)
 
-**Outputs (when complete):**
+**Outputs:**
 - `results/phase2_full_results.jsonl`
 - `results/phase2_full_errors.jsonl`
 - `results/phase2_full_summary.json`
 - Log: `logs/phase2_full_run.log`
 
-**Results:** *(to be filled in after run completes)*
+**Results:**
 
 | Metric | Phase 1 Full (1126q) | Phase 2 Sample (20q) | Phase 2 Full (1126q) |
 |--------|---------------------|---------------------|---------------------|
-| Overall Accuracy | 29.9% | 60.0% | TBD |
-| MCQ Accuracy | 10.7% | 66.7% | TBD |
-| Free-form Accuracy | 39.5% | 54.5% | TBD |
-| Single-part Free-form | 51.0% | 75.0% | TBD |
-| Multi-part Free-form | 30.2% | 42.9% | TBD |
+| Overall Accuracy | 29.9% | 60.0% | **54.2% (610/1126)** |
+| MCQ Accuracy | 10.7% | 66.7% | **51.5% (193/375)** |
+| Free-form Accuracy | 39.5% | 54.5% | **55.5% (417/751)** |
+| Single-part Free-form | 51.0% | 75.0% | **61.1% (206/337)** |
+| Multi-part Free-form | 30.2% | 42.9% | **51.0% (211/414)** |
+
+**Error breakdown (Phase 2 Full):**
+
+| Category | Count |
+|----------|-------|
+| `FREE_FORM_WRONG_ANSWER` | 259 |
+| `MCQ_NO_VALID_LETTER` | 114 |
+| `FREE_FORM_NO_BOX` | 75 |
+| `MCQ_WRONG_LETTER` | 68 |
+
+**Key finding — generation truncation:** Inspecting `phase2_full_results.jsonl` revealed that
+250/516 errors (48.4%) had no `</think>` closing tag, meaning the model hit the 8192-token
+limit mid-thought and never produced an answer. At ~3–4 chars/token, responses were reaching
+28k–36k characters — right at the ceiling. The 114 `MCQ_NO_VALID_LETTER` and 75
+`FREE_FORM_NO_BOX` errors are largely a symptom of this truncation.
+
+Note: the `_errors.jsonl` files intentionally store only the first 400 characters of each
+response (`testing_template.py:360`) — this is a deliberate storage choice, not a generation
+truncation bug.
 
 ---
 
@@ -329,16 +348,26 @@ python testing_template.py --phase phase3_mv8 --samples 8
 
 ---
 
-## Phase 3: Sampling strategy (Planned)
+## Phase 3: Sampling strategy (In Progress)
 
 **Goal:** Majority voting and temperature tuning to boost accuracy without retraining.
 
-**Plan:**
-- Implement N-sample majority voting (N=8)
-- Temperature sweep on held-out slice (e.g., 200 questions)
-- Best-of-N for free-form only
+**Scripts:** `scripts/run_phase3_stage1.sh`, `scripts/run_phase3_stage2.sh`, `scripts/run_phase3_final.sh`
 
-**Timeline:** Week [TBD]
+**Plan:**
+- **Stage 1:** Temperature sweep — run 200 questions at each of [0.3, 0.5, 0.6, 0.7, 0.9] with `n_samples=1` to find the best temperature
+- **Stage 2:** Majority voting sweep — run 200 questions at the best temperature with `n_samples` ∈ [3, 5, 7] to find the best voting count
+- **Final:** Full 1,126-question run with the winning (temperature, n_samples) combination
+
+**Token budget decision — max_tokens raised to 32768 (2026-05-11):**
+
+Phase 2 used `max_tokens=8192`, but 48.4% of errors had no `</think>` closing tag —
+the model was hitting the token limit mid-thought before producing any answer. Raising
+the limit to 32768 (the practical ceiling given `max_model_len=28000`) eliminates
+truncation-driven failures before we begin tuning temperature and majority voting, giving
+those experiments a clean baseline. All three phase 3 scripts pass `--max-tokens 32768`.
+
+**Status:** Not started (scripts ready, max_tokens updated)
 
 ---
 
@@ -446,20 +475,18 @@ python testing_template.py --phase phase3_mv8 --samples 8
 - **Dominant errors:** `FREE_FORM_WRONG_ANSWER` (5), `MCQ_WRONG_LETTER` (2)
 
 ### Phase 2 Full Dataset Results (1,126 questions — 2026-05-11)
-*(to be filled in after run completes)*
-- **Overall accuracy:** TBD
-- **MCQ accuracy:** TBD
-- **Free-form accuracy:** TBD — single-part TBD, multi-part TBD
-- **Dominant errors:** TBD
+- **Overall accuracy:** 54.2% (610/1126)
+- **MCQ accuracy:** 51.5% (193/375)
+- **Free-form accuracy:** 55.5% (417/751) — single-part 61.1%, multi-part 51.0%
+- **Dominant errors:** `FREE_FORM_WRONG_ANSWER` (259), `MCQ_NO_VALID_LETTER` (114)
+- **Truncation note:** 250/516 errors (48.4%) were caused by the 8192-token limit cutting off thinking traces; addressed in Phase 3 by raising to 32768
 
 ### Improvements Summary
 | Phase | Sample | Overall | MCQ | Free-form |
 |-------|--------|---------|-----|-----------|
 | Phase 1 full baseline | 1,126 | 29.9% | 10.7% | 39.5% |
 | Phase 2 (prompt fixes) | 20 | 60.0% | 66.7% | 54.5% |
-| **Phase 2 full dataset** | 1,126 | **TBD** | **TBD** | **TBD** |
-
-> Phase 2 full run launched 2026-05-11 with tmux + checkpoint-every-200. Update table when `results/phase2_full_summary.json` is written.
+| **Phase 2 full dataset** | 1,126 | **54.2%** | **51.5%** | **55.5%** |
 
 ---
 

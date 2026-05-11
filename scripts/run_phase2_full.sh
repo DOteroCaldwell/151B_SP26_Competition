@@ -5,11 +5,11 @@
 # See docs/dsmlp-long-jobs.md for full launch instructions.
 #
 # Usage:
-#   bash run_phase2_full.sh            # fresh run
-#   bash run_phase2_full.sh --resume   # pick up after a crash
+#   bash scripts/run_phase2_full.sh            # fresh run
+#   bash scripts/run_phase2_full.sh --resume   # pick up after a crash
 
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 export LD_LIBRARY_PATH=".venv/lib/python3.13/site-packages/torchvision.libs:${LD_LIBRARY_PATH:-}"
 
