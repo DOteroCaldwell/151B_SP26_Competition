@@ -225,11 +225,11 @@ def _majority_vote_mcq(candidates: list[str]) -> str:
 def _majority_vote_freeform(candidates: list[str], judger: Judger,
                              gold_list: list) -> tuple[bool, Optional[str]]:
     """
-    Return (correct, best_response) by majority vote over extracted answers.
+    Return (correct, extracted_answer) via symbolic-clustering majority vote.
 
-    Strategy: pick the response whose extracted answer matches the most other
-    responses (symbolic equality). Falls back to the first response if no
-    consensus can be formed. For n_samples=1 this is a no-op.
+    Extract each candidate's answer, cluster by judger.is_equal(), and pick the
+    representative of the largest cluster. For n_samples=1 this is a no-op.
+    Uses no gold information during voting — safe to use on the private test set.
     """
     if len(candidates) == 1:
         resp = candidates[0]
@@ -244,19 +244,42 @@ def _majority_vote_freeform(candidates: list[str], judger: Judger,
             extracted = None
         return correct, extracted
 
-    # Score each candidate independently, then take majority on correctness.
-    # TODO (Phase 3): implement symbolic clustering for non-binary aggregation.
-    scores = []
+    # Extract an answer string from each candidate response
+    extracted_list: list[Optional[str]] = []
     for resp in candidates:
         try:
-            ok = judger.auto_judge(pred=resp, gold=gold_list,
-                                   options=[[]] * len(gold_list))
+            extracted_list.append(judger.extract_ans(resp))
         except Exception:
-            ok = False
-        scores.append(ok)
+            extracted_list.append(None)
 
-    correct = sum(scores) > len(scores) / 2  # strict majority
-    best_resp = candidates[scores.index(True)] if any(scores) else candidates[0]
+    # Cluster candidates whose answers are symbolically equal
+    clusters: list[tuple[str, list[int]]] = []  # (representative_answer, [candidate_indices])
+    for i, ans in enumerate(extracted_list):
+        if ans is None:
+            continue
+        placed = False
+        for cluster_ans, idxs in clusters:
+            try:
+                if judger.is_equal(ans, cluster_ans):
+                    idxs.append(i)
+                    placed = True
+                    break
+            except Exception:
+                pass
+        if not placed:
+            clusters.append((ans, [i]))
+
+    # Pick the response from the largest cluster; fall back to first candidate
+    best_resp = candidates[0]
+    if clusters:
+        best_cluster = max(clusters, key=lambda x: len(x[1]))
+        best_resp = candidates[best_cluster[1][0]]
+
+    try:
+        correct = judger.auto_judge(pred=best_resp, gold=gold_list,
+                                    options=[[]] * len(gold_list))
+    except Exception:
+        correct = False
     try:
         extracted = judger.extract_ans(best_resp)
     except Exception:
@@ -506,6 +529,10 @@ def parse_args() -> argparse.Namespace:
                         help="Responses per question for majority voting (default: 1)")
     parser.add_argument("--temp",    type=float, default=0.6,
                         help="Sampling temperature (default: 0.6)")
+    parser.add_argument("--top-p",   type=float, default=0.95, dest="top_p",
+                        help="Nucleus sampling cutoff (default: 0.95)")
+    parser.add_argument("--top-k",   type=int,   default=20,   dest="top_k",
+                        help="Top-k sampling (default: 20; 0 to disable)")
     parser.add_argument("--max-tokens", type=int, default=8192, dest="max_tokens",
                         help="Max new tokens per response (default: 8192)")
     parser.add_argument("--checkpoint-every", type=int, default=0, dest="checkpoint_every",
@@ -527,6 +554,8 @@ def main() -> None:
         gpu_id           = args.gpu,
         n_samples        = args.samples,
         temperature      = args.temp,
+        top_p            = args.top_p,
+        top_k            = args.top_k,
         max_tokens       = args.max_tokens,
         checkpoint_every = args.checkpoint_every,
         resume           = args.resume,
