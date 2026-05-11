@@ -367,7 +367,61 @@ the limit to 32768 (the practical ceiling given `max_model_len=28000`) eliminate
 truncation-driven failures before we begin tuning temperature and majority voting, giving
 those experiments a clean baseline. All three phase 3 scripts pass `--max-tokens 32768`.
 
-**Status:** Not started (scripts ready, max_tokens updated)
+**Status:** Stage 1 running (launched 2026-05-11 15:27 UTC)
+
+### 3.1 Stage 1: Temperature Sweep
+
+**Config:** 200 questions, `n_samples=1`, `max_tokens=32768`, `top_p=0.95`, `top_k=20`
+
+**Temperatures tested:** 0.3, 0.5, 0.6, 0.7, 0.9
+
+**Results:**
+
+| Temperature | Overall | MCQ | Free-form | vs Phase 2 Full |
+|-------------|---------|-----|-----------|-----------------|
+| 0.3 | TBD | TBD | TBD | TBD |
+| 0.5 | TBD | TBD | TBD | TBD |
+| 0.6 (baseline) | TBD | TBD | TBD | TBD |
+| 0.7 | TBD | TBD | TBD | TBD |
+| 0.9 | TBD | TBD | TBD | TBD |
+
+**Best temperature:** TBD
+
+**Key observations:** TBD
+
+### 3.2 Stage 2: Majority Voting Sweep
+
+*(pending Stage 1 completion)*
+
+**Config:** 200 questions, best temperature from Stage 1, `max_tokens=32768`
+
+**n_samples tested:** 3, 5, 7
+
+**Results:**
+
+| n_samples | Overall | MCQ | Free-form | vs Stage 1 best |
+|-----------|---------|-----|-----------|-----------------|
+| 3 | TBD | TBD | TBD | TBD |
+| 5 | TBD | TBD | TBD | TBD |
+| 7 | TBD | TBD | TBD | TBD |
+
+**Best n_samples:** TBD
+
+**Key observations:** TBD
+
+### 3.3 Final Run
+
+*(pending Stage 2 completion)*
+
+**Config:** All 1,126 questions, winning (temperature, n_samples) from stages 1–2, `max_tokens=32768`
+
+| Metric | Phase 2 Full | Phase 3 Final | Delta |
+|--------|-------------|---------------|-------|
+| Overall | 54.2% | TBD | TBD |
+| MCQ | 51.5% | TBD | TBD |
+| Free-form | 55.5% | TBD | TBD |
+| Single-part | 61.1% | TBD | TBD |
+| Multi-part | 51.0% | TBD | TBD |
 
 ---
 
