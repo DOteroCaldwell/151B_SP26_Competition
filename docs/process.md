@@ -367,7 +367,10 @@ the limit to 32768 (the practical ceiling given `max_model_len=28000`) eliminate
 truncation-driven failures before we begin tuning temperature and majority voting, giving
 those experiments a clean baseline. All three phase 3 scripts pass `--max-tokens 32768`.
 
-**Status:** Stage 1 running (launched 2026-05-11 15:27 UTC)
+**Status:** Stage 1 complete (2026-05-13). Stage 2 launched (2026-05-13).
+
+**Script:** `scripts/run_phase3_pipeline.sh` — chains stage 1 → stage 2 → final run automatically;
+crash-resilient (checkpointing + resume); safe to re-run after a pod expiration.
 
 ### 3.1 Stage 1: Temperature Sweep
 
@@ -375,27 +378,66 @@ those experiments a clean baseline. All three phase 3 scripts pass `--max-tokens
 
 **Temperatures tested:** 0.3, 0.5, 0.6, 0.7, 0.9
 
+**Command (via pipeline):** `bash scripts/run_phase3_pipeline.sh`
+**Log:** `logs/phase3_pipeline.log`
+
 **Results:**
 
-| Temperature | Overall | MCQ | Free-form | vs Phase 2 Full |
-|-------------|---------|-----|-----------|-----------------|
-| 0.3 | TBD | TBD | TBD | TBD |
-| 0.5 | TBD | TBD | TBD | TBD |
-| 0.6 (baseline) | TBD | TBD | TBD | TBD |
-| 0.7 | TBD | TBD | TBD | TBD |
-| 0.9 | TBD | TBD | TBD | TBD |
+| Temperature | Overall | MCQ | Free-form | Multi-part FF | vs Phase 2 Full |
+|-------------|---------|-----|-----------|---------------|-----------------|
+| 0.3 | 64.5% (129/200) | 76.5% (52/68) | 58.3% (77/132) | 52.9% (36/68) | +10.3pp |
+| 0.5 | 63.5% (127/200) | 77.9% (53/68) | 56.1% (74/132) | 48.5% (33/68) | +9.3pp |
+| 0.6 (baseline) | 64.5% (129/200) | 79.4% (54/68) | 56.8% (75/132) | 51.5% (35/68) | +10.3pp |
+| **0.7** | **66.5% (133/200)** | 77.9% (53/68) | **60.6% (80/132)** | **57.4% (39/68)** | **+12.3pp** |
+| 0.9 | 65.5% (131/200) | 77.9% (53/68) | 59.1% (78/132) | 54.4% (37/68) | +11.3pp |
 
-**Best temperature:** TBD
+**Best temperature:** **0.7** — 66.5% overall (133/200), completed 2026-05-13
 
-**Key observations:** TBD
+**Status by run:**
+- `phase3_temp03`: complete via `scripts/run_phase3_stage1.sh` (2026-05-11), log `logs/phase3_stage1.log`
+- `phase3_temp05`, `phase3_temp06`: complete via `scripts/run_phase3_pipeline.sh` (2026-05-12)
+- `phase3_temp07`: complete via pipeline (crashed + resumed 2026-05-12→13), log `logs/phase3_pipeline.log`
+- `phase3_temp09`: complete via `scripts/run_phase3_stage1_resume.sh` (2026-05-13), log `logs/phase3_stage1_resume.log`
+
+**Key observations:**
+
+1. **Temperature 0.7 is the clear winner.** It is the only setting to break 66% overall, and it
+   leads every other temperature on free-form (+2.3pp vs second-best temp=0.9) and multi-part
+   free-form (+3.0pp vs next best). MCQ accuracy is essentially flat across all temperatures
+   (77.9–79.4%), so the temperature signal comes entirely from free-form reasoning quality.
+
+2. **The max_tokens increase explains most of the gain over Phase 2 full.** All five temperatures
+   sit 9–12pp above Phase 2 full (54.2%), yet they use the same prompts. The only change is
+   `max_tokens` 8192 → 32768. Phase 2 had 48.4% of its errors caused by mid-thought truncation;
+   removing that ceiling is the dominant factor. Temperature tuning is a smaller, secondary effect.
+
+3. **Multi-part free-form is the most temperature-sensitive category.** It ranges from 48.5%
+   (temp=0.5) to 57.4% (temp=0.7) — a 9pp spread — while single-part free-form is nearly flat
+   (64.1% across all temps) and MCQ is also flat. Higher temperatures appear to help the model
+   explore alternative solution paths needed for multi-step problems.
+
+4. **Error profile is now dominated by wrong answers, not formatting.** Across all temperatures,
+   ~75–79% of errors are `FREE_FORM_WRONG_ANSWER` and the rest are MCQ letter errors. `FREE_FORM_NO_BOX`
+   and `MCQ_NO_VALID_LETTER` are near-zero, confirming that the Phase 2 prompt fixes held at scale
+   and that the remaining headroom is mathematical correctness, not formatting.
+
+5. **Implication for Stage 2:** Majority voting at temp=0.7 targets the wrong-answer tail.
+   Because ~40% of questions are still incorrect and the errors are math errors rather than
+   formatting errors, voting across multiple samples (N=3, 5, 7) should surface the correct
+   answer when the model knows it but occasionally makes mistakes. Questions where the model is
+   consistently wrong will not benefit from voting.
 
 ### 3.2 Stage 2: Majority Voting Sweep
 
-*(pending Stage 1 completion)*
-
-**Config:** 200 questions, best temperature from Stage 1, `max_tokens=32768`
+**Config:** 200 questions, temp=0.7 (best from Stage 1), `max_tokens=32768`, symbolic-clustering majority vote
 
 **n_samples tested:** 3, 5, 7
+
+**Command:** `bash scripts/run_phase3_pipeline.sh` (continued from Stage 1 — Stage 1 runs skipped automatically)
+**Launched:** 2026-05-13 18:35 UTC
+**Node:** `dsmlp-jupyter-doterocaldwell`
+**Job-alive strategy:** detached tmux session `p3_pipeline` (`tmux new-session -d -s p3_pipeline`)
+**Log:** `logs/phase3_pipeline.log`
 
 **Results:**
 
@@ -411,7 +453,7 @@ those experiments a clean baseline. All three phase 3 scripts pass `--max-tokens
 
 ### 3.3 Final Run
 
-*(pending Stage 2 completion)*
+*(pending Stage 2 completion — will run automatically via pipeline)*
 
 **Config:** All 1,126 questions, winning (temperature, n_samples) from stages 1–2, `max_tokens=32768`
 
@@ -535,12 +577,20 @@ those experiments a clean baseline. All three phase 3 scripts pass `--max-tokens
 - **Dominant errors:** `FREE_FORM_WRONG_ANSWER` (259), `MCQ_NO_VALID_LETTER` (114)
 - **Truncation note:** 250/516 errors (48.4%) were caused by the 8192-token limit cutting off thinking traces; addressed in Phase 3 by raising to 32768
 
+### Phase 3 Stage 1 Results (temperature sweep, 200 questions — 2026-05-13)
+- **Best temperature:** 0.7 → 66.5% overall (133/200)
+- **MCQ accuracy:** 77.9% (essentially flat across all temps, 77.9–79.4%)
+- **Free-form accuracy:** 60.6% — single-part 64.1%, multi-part 57.4%
+- **Key driver:** max_tokens 8192→32768 eliminated truncation; temperature tuning added ~2pp on top
+- **Next:** Stage 2 majority voting at temp=0.7
+
 ### Improvements Summary
 | Phase | Sample | Overall | MCQ | Free-form |
 |-------|--------|---------|-----|-----------|
 | Phase 1 full baseline | 1,126 | 29.9% | 10.7% | 39.5% |
 | Phase 2 (prompt fixes) | 20 | 60.0% | 66.7% | 54.5% |
-| **Phase 2 full dataset** | 1,126 | **54.2%** | **51.5%** | **55.5%** |
+| Phase 2 full dataset | 1,126 | 54.2% | 51.5% | 55.5% |
+| **Phase 3 Stage 1 best (temp=0.7)** | **200** | **66.5%** | **77.9%** | **60.6%** |
 
 ---
 
