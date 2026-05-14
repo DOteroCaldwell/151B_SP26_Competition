@@ -427,35 +427,34 @@ crash-resilient (checkpointing + resume); safe to re-run after a pod expiration.
    answer when the model knows it but occasionally makes mistakes. Questions where the model is
    consistently wrong will not benefit from voting.
 
-### 3.2 Stage 2: Majority Voting Sweep
+### 3.2 Stage 2: Majority Voting Sweep — Abandoned
 
-**Config:** 200 questions, temp=0.7 (best from Stage 1), `max_tokens=32768`, symbolic-clustering majority vote
+**Decision (2026-05-14): Majority voting sweep abandoned.** The sweep is not viable at `max_tokens=32768` within DSMLP pod lifetimes, and partial results suggest voting provides little benefit for free-form questions.
 
-**n_samples tested:** 3, 5, 7
+**What ran:** `phase3_mv3` (n_samples=3) was attempted twice — first launched 2026-05-13 18:35 UTC, killed by pod expiration; resumed 2026-05-14 03:11 UTC, killed again at ~06:26 UTC after ~3h14m. Checkpoint saved 100/200 questions.
 
-**Command:** `bash scripts/run_phase3_pipeline.sh` (continued from Stage 1 — Stage 1 runs skipped automatically)
-**Launched:** 2026-05-13 18:35 UTC
-**Node:** `dsmlp-jupyter-doterocaldwell`
-**Job-alive strategy:** detached tmux session `p3_pipeline` (`tmux new-session -d -s p3_pipeline`)
+**Partial result (100 questions, n_samples=3):**
+
+| Metric | Stage 1 best (temp=0.7, 200q) | MV3 partial (100q) |
+|--------|-------------------------------|--------------------|
+| Overall | 66.5% | 63.0% |
+| MCQ | 77.9% | 81.6% |
+| Free-form | 60.6% | 51.6% |
+
+**Why abandoned:**
+
+1. **Throughput is incompatible with pod limits.** With `max_tokens=32768`, some questions hit the full token ceiling on all 3 samples simultaneously, stalling vLLM. Chunk 1-25 (75 prompts) took 2:42:55. Extrapolated: n_samples=3 needs ~22 hours, n_samples=5 ~36 hours, n_samples=7 ~51 hours — all far beyond a single pod session.
+
+2. **Voting does not help free-form.** The model makes the same math error consistently across all samples on questions it gets wrong. Free-form accuracy dropped ~9pp vs Stage 1 single-sample (51.6% vs 60.6%), indicating the wrong-answer errors are systematic, not random. MCQ gains slightly (+3.7pp) because letter-selection errors are more random and voting helps there.
+
+3. **Stage 1 already identified the key win.** The largest gain in Phase 3 came from raising `max_tokens` 8192→32768 (eliminated truncation-driven failures, +10pp). Temperature tuning added ~2pp on top. Voting adds cost without proportional benefit.
+
 **Log:** `logs/phase3_pipeline.log`
-
-**Results:**
-
-| n_samples | Overall | MCQ | Free-form | vs Stage 1 best |
-|-----------|---------|-----|-----------|-----------------|
-| 3 | TBD | TBD | TBD | TBD |
-| 5 | TBD | TBD | TBD | TBD |
-| 7 | TBD | TBD | TBD | TBD |
-
-**Best n_samples:** TBD
-
-**Key observations:** TBD
+**Partial results:** `results/phase3_mv3_results.jsonl` (100 questions), `results/phase3_mv3_errors.jsonl`
 
 ### 3.3 Final Run
 
-*(pending Stage 2 completion — will run automatically via pipeline)*
-
-**Config:** All 1,126 questions, winning (temperature, n_samples) from stages 1–2, `max_tokens=32768`
+**Config:** All 1,126 questions, temp=0.7, n_samples=1, `max_tokens=32768`
 
 | Metric | Phase 2 Full | Phase 3 Final | Delta |
 |--------|-------------|---------------|-------|
