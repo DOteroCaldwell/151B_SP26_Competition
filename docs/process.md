@@ -466,14 +466,69 @@ crash-resilient (checkpointing + resume); safe to re-run after a pod expiration.
 
 ---
 
-## Phase 4: Prompt engineering (Planned)
+## Phase 4: Prompt engineering — precision (Planned)
 
-**Goal:** Few-shot exemplars and chain-of-thought steering.
+**Goal:** Eliminate numerical precision failures in `FREE_FORM_WRONG_ANSWER`, which is now the dominant error category after Phase 3 (~75–79% of remaining errors).
 
-**Plan:**
-- Add 2–3 worked examples in user turn
-- Explicit instruction: "write 'Therefore, the answer is X' before `\boxed{X}`"
-- Domain-specific prompts for high-error categories (calculus, complex analysis, etc.)
+**Motivation:** Inspection of `results/phase3_temp07_errors.jsonl` shows a consistent pattern where the model's reasoning is correct but its final numerical answer is off in one of four ways:
+
+| Failure mode | Gold | Predicted | Example ID |
+|---|---|---|---|
+| Over-rounding | `143.224229233795` | `143` | 2 |
+| Over-rounding | `62.7777777777778` | `62.78` | 5 |
+| Decimal hallucination of exact form | `(1/2)^[(1999-1963)/31]` | `0.447` | 8 |
+| Under-precision when explicit | `2.2892` (problem asks ≥1 decimal place) | `2.3` | 39 |
+| Off-by-one on rounded discrete value | `13` | `14` | 12 |
+
+The current `SYSTEM_PROMPT_MATH` (`testing_template.py:104-110`) enforces `\boxed{}` formatting but says nothing about decimal precision, exact form, or rounding. Phase 4 adds targeted precision instructions and tests them on the same 200-question sample used in Phase 3 Stage 1 so results are directly comparable.
+
+### 4.1 Candidate prompt additions
+
+Each candidate is a **delta** appended to the existing `SYSTEM_PROMPT_MATH`, not a replacement. They can be combined.
+
+**Candidate A — Exact form by default**
+
+Targets symbolic → decimal hallucination (gold `(1/2)^[...]` → `0.447`).
+
+> "Express the final answer in exact form (fractions like `1/3`, radicals like `\sqrt{2}`, symbolic constants like `\pi`, `e`) whenever possible. Only convert to a decimal if the problem explicitly asks for a decimal or numerical approximation."
+
+**Candidate B — High-precision decimals when decimal is required**
+
+Targets over-rounding (`143.22...` → `143`, `62.7777...` → `62.78`).
+
+> "When a decimal answer is required, report at least 10 significant figures. Do not round intermediate calculations — only round the final answer, and only if the problem specifies a precision."
+
+**Candidate C — Match the precision cue in the question**
+
+Targets under-precision when the problem explicitly asks for N places (`2.2892` → `2.3`).
+
+> "Read the problem for precision cues (`round to N decimal places`, `to the nearest integer`, `exact value`, `accurate to N decimal places`). Match the requested precision exactly. If no precision is specified, prefer exact symbolic form, or otherwise 10 significant figures."
+
+**Candidate D — No digit fabrication**
+
+Targets hallucinated trailing digits when the model cannot actually compute them.
+
+> "Do not write more decimal digits than you can derive from your work. If you cannot verify a digit with explicit arithmetic, do not include it. Prefer fewer correct digits over more guessed digits."
+
+**Candidate E — Self-verification pass**
+
+Targets the broader `FREE_FORM_WRONG_ANSWER` tail (arithmetic slips late in long derivations).
+
+> "Before placing your final answer in `\boxed{}`, verify it by either (1) substituting it back into the original equation/condition, or (2) re-computing the final arithmetic step from scratch. State the verification result briefly. If the check fails, redo the calculation."
+
+**Combined recommended draft (A + B + C) — first A/B test**
+
+> "Express the final answer in exact form (fractions, radicals, `\pi`, `e`) whenever possible. Only convert to a decimal when the problem explicitly asks for a numerical value or when an exact form is not available. If a decimal is required, report at least 10 significant figures, do not round intermediate calculations, and match any precision specified in the problem (`round to N places`, `nearest integer`, etc.)."
+
+### 4.2 Evaluation plan
+
+1. Run each candidate (A, B, C, D, E individually + combined ABC) on the same 200-question sample used in Phase 3 Stage 1, at temp=0.7, n_samples=1, max_tokens=32768. Use `--compare phase3_temp07` for delta reporting.
+2. Pick the winner (or the best combined subset) and run on the full 1,126 questions.
+3. Re-bucket `FREE_FORM_WRONG_ANSWER` into precision-specific subcategories (`WRONG_ANSWER_ROUNDING`, `WRONG_ANSWER_DECIMAL_FOR_EXACT`, `WRONG_ANSWER_MATH_ERROR`) to confirm the prompts shrink the targeted failure modes and aren't just shifting errors elsewhere.
+
+**Risks to watch:**
+- Candidate B (10 sig figs) may cause the model to fabricate digits, partially undoing its own gains. Pairs naturally with Candidate D.
+- Candidate E (self-verification) lengthens responses and may push more cases against the `max_tokens=32768` ceiling. Monitor truncation rate.
 
 **Timeline:** Week [TBD]
 

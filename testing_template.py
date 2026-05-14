@@ -89,6 +89,11 @@ class Config:
     # Prepended to the user turn when non-empty. See _build_few_shot_prefix().
     few_shot_examples: list[dict] = field(default_factory=list)
 
+    # ── Prompt append (Phase 4: precision experiments) ────────────────────────
+    # Text appended to SYSTEM_PROMPT_MATH when non-empty. Lets the harness sweep
+    # over prompt candidates without editing the file each run.
+    prompt_math_append: str = ""
+
     # ── Checkpointing (for long runs on DSMLP) ────────────────────────────────
     # checkpoint_every=N flushes scored results to disk every N questions so a
     # crash or pod expiration doesn't lose all progress.
@@ -132,11 +137,14 @@ def _build_few_shot_prefix(examples: list[dict]) -> str:
 
 def build_prompt(question: str, options: Optional[list], cfg: Config) -> tuple[str, str]:
     prefix = _build_few_shot_prefix(cfg.few_shot_examples)
+    math_prompt = SYSTEM_PROMPT_MATH
+    if cfg.prompt_math_append:
+        math_prompt = f"{SYSTEM_PROMPT_MATH} {cfg.prompt_math_append}"
     if options:
         labels    = [chr(65 + i) for i in range(len(options))]
         opts_text = "\n".join(f"{lbl}. {opt.strip()}" for lbl, opt in zip(labels, options))
         return SYSTEM_PROMPT_MCQ, f"{prefix}{question}\n\nOptions:\n{opts_text}"
-    return SYSTEM_PROMPT_MATH, f"{prefix}{question}"
+    return math_prompt, f"{prefix}{question}"
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -539,6 +547,8 @@ def parse_args() -> argparse.Namespace:
                         help="Flush results to disk every N questions (0=all at once; recommended: 200)")
     parser.add_argument("--resume", action="store_true",
                         help="Skip already-processed IDs from existing output files (crash recovery)")
+    parser.add_argument("--prompt-math-append", default="", dest="prompt_math_append",
+                        help="Text appended to SYSTEM_PROMPT_MATH (Phase 4 prompt sweep)")
     return parser.parse_args()
 
 
@@ -559,6 +569,7 @@ def main() -> None:
         max_tokens       = args.max_tokens,
         checkpoint_every = args.checkpoint_every,
         resume           = args.resume,
+        prompt_math_append = args.prompt_math_append,
     )
 
     all_data = load_data(cfg)
