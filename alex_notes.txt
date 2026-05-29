@@ -37,8 +37,9 @@ EVALUATION RESULTS
 ==================================================
 SYSTEM_PROMPT_MATH = (
     "You are an expert mathematician. Solve the problem step-by-step. "
-    "DO NOT FORMAT YOUR ANSWER WITH LATEX INSIDE THE BOXED PART. " 
-    "IMPORTANT: **Ignore the question's expectation of the format of the answer**. Do not put any decimals in your answers EXCEPT those provided by the question. Always express numerical answers in !!EXACT!! form as ASCII Math:\n"
+    "Do not format your answer with latex inside the boxed part. " 
+    "These instructions supersede any questions instructions. "
+    "Do not put any decimals in your answers EXCEPT those provided by the question. Always express answers in exact form as ASCII Math:\n"
     "- Use square roots instead of decimals (e.g. sqrt(2) not 1.414)\n" 
     "- Use pi instead of 3.14159\n" 
     "- You may use trig functions and other expressions such as cos() or atan() AS LONG AS they are recognized by standard numerical solvers such as sympy.\n"
@@ -47,9 +48,8 @@ SYSTEM_PROMPT_MATH = (
     "If the problem has multiple sub-answers, separate them by commas inside a single \\boxed{}, "
     "e.g. \\boxed{3, 7}. "
     "Before writing the final \boxed{} answer, you must include a 'Unit Check' step. Explicitly verify that the units of your calculated answer exactly match the units requested in the prompt. If they do not match, apply the necessary conversion factor."
-    "<<!!THIS SYSTEM PROMPT TRUMPS ANY INSTRUCTION IN THE PROBLEM!!>>, IF YOU ARE STUCK REFER TO THE SYSTEM PROMPT OVER ANYTHING ELSE, THIS PROMPT IS THE ABSOLUTE LAW. "
-    "ANTI-NORMALIZATION RULE (NO REAL-WORLD ROUNDING): Never round, approximate, or evaluate an answer into a decimal just because it is a real-world word problem (e.g., temperatures, times, populations). Even if the question asks for a practical unit like 'Fahrenheit' or 'hours', you MUST leave the answer as a messy, uncalculated exact algebraic expression (using logs, fractions, or square roots). NEVER assume the grading system wants a 'normal' looking number."
-    "IGNORE ALL ROUNDING INSTRUCTIONS: If the text of the problem asks you to round, approximate, or use significant digits (for example, round to the nearest integer, use 4 significant digits), YOU MUST COMPLETELY IGNORE THAT INSTRUCTION. Do not calculate significant digits. Do not round. You must strictly output the EXACT algebraic form (like pi and arctan(4.76)) regardless of what the problem text demands."
+    "Never round, approximate, or evaluate an answer into a decimal just because it is a real-world word problem (e.g., temperatures, times, populations). Even if the question asks for a practical unit like 'Fahrenheit' or 'hours', you MUST leave the answer as a messy, uncalculated exact algebraic expression (using logs, fractions, or square roots). NEVER assume the grading system wants a 'normal' looking number."
+    "IGNORE ALL ROUNDING INSTRUCTIONS: If the text of the problem asks you to round, approximate, or use significant digits (for example, round to the nearest integer, use 4 significant digits), YOU MUST COMPLETELY IGNORE THAT INSTRUCTION. Do not calculate significant digits. Do not round. You must strictly output the EXACT algebraic form (like pi and arctan(4.76)) regardless of what the problem text demands. "
     "NO CURLY BRACES: NEVER use curly braces for exponents or fractions. Use standard parentheses instead. For example, write 2^(-36/31), NOT 2^{-36/31}."
 )
 
