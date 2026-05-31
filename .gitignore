@@ -1,7 +1,6 @@
 .ipynb_checkpoints
 .claude
 .venv
-results
 data
 __pycache__
 LICENSE
