@@ -45,17 +45,13 @@ CSE 151B/251B Milestone Report
 
 \author{%
   Diego Otero-Caldwell \\
-  Department of Computer Science and Engineering \\
-  University of California, San Diego \\
   \texttt{doterocaldwell@ucsd.edu} \\
   \And
   Alex Cojocaru \\
-  Department of Computer Science and Engineering \\
-  University of California, San Diego \\
+  \texttt{acojocaru@ucsd.edu} \\
   \And
   Shashwat Dudeja \\
-  Department of Computer Science and Engineering \\
-  University of California, San Diego \\
+  \texttt{sdudeja@ucsd.edu} \\
 }
 
 \begin{document}
@@ -95,7 +91,7 @@ The starter code provides data loading, inference scaffolding, and the \texttt{j
   \item \textbf{Dataset quality audit:} Ground-truth answers span 0--16 decimal places with no uniform rounding standard, validating the use of tolerance-based numeric equivalence in \texttt{judger.py} rather than exact floating-point matching.
 \end{itemize}
 
-
+\iffalse
 % % % === Related Work
 \section{Related Work}
 \label{sec:relatedwork}
@@ -108,7 +104,7 @@ The starter code provides data loading, inference scaffolding, and the \texttt{j
 
 \paragraph{Sampling and self-consistency.}
 \citet{wang2022selfconsistency} showed that sampling multiple reasoning chains and taking a majority vote over final answers—self-consistency—improves accuracy over greedy decoding by 1--20 percentage points across several reasoning benchmarks, with gains increasing in difficulty. Models trained with reinforcement learning on reasoning rewards, such as DeepSeek-R1 \citep{deepseekr1}, further push accuracy by optimizing directly for correct final answers. We plan to apply majority voting in Phase~3 and explore RL-based fine-tuning in Phase~7.
-
+\fi
 
 % % % === Methods
 \section{Methods}
@@ -313,7 +309,7 @@ Phase~6 will fine-tune the model on the public dataset using LoRA/QLoRA, with th
 Phase~7 will explore reinforcement learning using binary reward (correct~=~+1, wrong~=~0) from \texttt{judger.py}, following approaches similar to DeepSeek-R1 \citep{deepseekr1}.
 
 \paragraph{Team Responsibilities.}
-Diego Otero-Caldwell led infrastructure development, including the inference pipelines (\texttt{run\_baseline.py}, \texttt{phase2\_test.py}), the standardized testing harness (\texttt{testing\_template.py}), and all process documentation. Alex Cojocaru contributed to data analysis, error categorization, and prompt iteration strategy. Shashwat Dudeja contributed to experimental design, result interpretation, and evaluation methodology. All three team members collaborated on the Phase~2 prompt redesign and will share responsibility for fine-tuning and RL experiments in Phases~6--7.
+Diego Otero-Caldwell led infrastructure development, including the inference pipelines (\texttt{run\_baseline.py}, \texttt{phase2\_test.py}), the standardized testing harness (\texttt{testing\_template.py}), and all process documentation. Alex Cojocaru set up and configured the team's development and testing environment on UCSD's DataHub (DSMLP), including GPU allocation and dependency management, and contributed to data analysis, error categorization, and prompt iteration strategy. Shashwat Dudeja led milestone report writing and editing, contributed to experimental design, result interpretation, and evaluation methodology. All three team members collaborated on the Phase~2 prompt redesign and will share responsibility for fine-tuning and RL experiments in Phases~6--7.
 
 \paragraph{Timelines.}
 \begin{itemize}
