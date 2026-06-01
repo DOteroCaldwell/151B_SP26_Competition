@@ -2,6 +2,7 @@ import json
 import os
 import re
 import sys
+import csv
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -59,7 +60,10 @@ SYSTEM_PROMPT_MCQ = (
     A: There are 9 one-digit numbers from 1 to 9. There are 90 two-digit numbers from 10 to 99. There are 401
     three-digit numbers from 100 to 500. 9 + 90(2) + 401(3) = 1392. The answer is \\boxed{b}."""
 )
-
+def clean_response(value):
+    if value is None:
+        return ""
+    return " ".join(str(value).splitlines())
 
 def build_prompt(question: str, options: Optional[List[str]]) -> tuple[str, str]:
     """Return (system_prompt, user_prompt) for a question."""
@@ -155,6 +159,25 @@ def run_inference(
             f.write(json.dumps(record) + "\n")
 
     print(f"Saved {len(responses)} records to {out_path}")
+
+    # For cleaning the file
+    with open(output_path, "r", encoding="utf-8") as infile, open(
+        "private_test_results.csv", "w", encoding="utf-8", newline=""
+    ) as outfile:
+        writer = csv.DictWriter(outfile, fieldnames=["id", "response"])
+        writer.writeheader()
+
+        for line in infile:
+            if not line.strip():
+                continue
+
+            item = json.loads(line)
+            writer.writerow(
+                {
+                    "id": item.get("id", ""),
+                    "response": clean_response(item.get("response", "")),
+                }
+            )
 
 
 if __name__ == "__main__":
