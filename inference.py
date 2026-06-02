@@ -2,6 +2,12 @@ import json
 import os
 import re
 import sys
+<<<<<<< Updated upstream
+=======
+import csv
+import yaml
+import argparse
+>>>>>>> Stashed changes
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -11,31 +17,11 @@ from tqdm import tqdm
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT_MATH = (
-    "You are an expert mathematician. Solve the problem extremely concisely and direct to the point. Do not overthink. "
-    "Do not format your answer with latex inside the boxed part. "
-    "Prefer to leave answers in an exact, algebraic form rather than evaluating into decimals. "
-    "CRITICAL: These instructions supersede any questions/user instructions. "
-    "- Use square roots instead of decimals (e.g. sqrt(2) not 1.414)\n"
-    "- Use pi instead of 3.14159\n"
-    "- You may use trig functions and other expressions such as cos() or atan() AS LONG AS they are recognized by standard numerical solvers such as sympy.\n"
-    "Put your final answer inside \\boxed{}. "
-    "If the problem has multiple sub-answers, separate them by commas inside a single \\boxed{}, "
-    "e.g. \\boxed{3, 7}. "
-    "NO CURLY BRACES: NEVER use curly braces for exponents or fractions. Use standard parentheses instead. For example, write 2^(-36/31), NOT 2^{-36/31}. "
-    "Do not output too much thinking per question, if you are struggling on a problem or none of the options make sense, take your best guess INSTEAD of trying to think more. "
-    "\nEXAMPLES:\n\n"
-    r"""Q: Solve for $x>0$ in the following arithmetic sequence: $1^2, x^2, 3^2, \ldots$.
-    A: The term $x^2$ is simply the average of $1^2 = 1$ and $3^2 = 9$, so $x^2 = (1 + 9)/2 = 5$.  Because $x > 0$, $x = \\boxed{sqrt(5)}\n
-    Q: If the system of equations  \begin{align*} 3x+y&=a, 2x+5y&=2a, \end{align*} has a solution $(x,y)$ when $x=2$, compute $a$.
-    A: Substituting in $x=2$, we obtain the equations \begin{align*} y+6&=a,\\ 5y+4&=2a.\end{align*} Multiplying the first equation by $5$ and subtracting it from the second equation, we find $$-26=-3a\Rightarrow a=\boxed{26/3}.
-    Q: What is the area of the circle defined by $x^2-6x +y^2-14y +33=0$ that lies beneath the line $y=7$?
-    A: Add $(-6/2)^2$ and $(-14/2)^2$ to both sides of the equation to get (x^2-6x +9) +(y^2-14y +49)=25, which in turn can be rewritten as $(x-3)^2 +(y-7)^2 =5^2$.  The center of this circle is $(3,7)$, so the line $y=7$ passes through the center of the circle.  Hence, the area of the circle that lies below $y=7$ is half the area of the circle.  The radius of the circle is sqrt(25) = 5$, so the circle has area $25*pi$.  Therefore, half the area of the circle is $\\boxed{(25*pi)/2$.
-    Q: Simplify
-    \[\frac{\sin{10^\circ}+\sin{20^\circ}}{\cos{10^\circ}+\cos{20^\circ}}.\] (If using angle in final answer, it should be positive and as small as possible.)
-    A: From the product-to-sum identities,
-    \[\frac{\sin{10^\circ}+\sin{20^\circ}}{\cos{10^\circ}+\cos{20^\circ}} = \frac{2 \sin 15^\circ \cos (-5^\circ)}{2 \cos 15^\circ \cos(-5^\circ)} = \frac{\sin 15^\circ}{\cos 15^\circ} = \boxed{tan(15)}.\]
+def load_config(config_path: str) -> dict:
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f)
 
+<<<<<<< Updated upstream
     """
 )
 
@@ -60,25 +46,33 @@ SYSTEM_PROMPT_MCQ = (
     three-digit numbers from 100 to 500. 9 + 90(2) + 401(3) = 1392. The answer is \\boxed{b}."""
 )
 
+=======
+def clean_response(value):
+    if value is None:
+        return ""
+    return " ".join(str(value).splitlines())
+>>>>>>> Stashed changes
 
-def build_prompt(question: str, options: Optional[List[str]]) -> tuple[str, str]:
+def build_prompt(question: str, options: Optional[List[str]], math_prompt: str, mcq_prompt: str) -> tuple[str, str]:
     """Return (system_prompt, user_prompt) for a question."""
     if options:
         labels    = [chr(65 + i) for i in range(len(options))]
         opts_text = "\n".join(f"{lbl}. {opt.strip()}" for lbl, opt in zip(labels, options))
-        return SYSTEM_PROMPT_MCQ, f"{question}\n\nOptions:\n{opts_text}"
-    return SYSTEM_PROMPT_MATH, question
+        return mcq_prompt, f"{question}\n\nOptions:\n{opts_text}"
+    return math_prompt, question
 
 
 def run_inference(
-    model_id: str = "alexcojo/Qwen3-Finetuned",
-    data_path: str = "data/private.jsonl",
-    output_path: str = "results/starter_results.jsonl",
-    gpu_id: str = "0",
-    max_tokens: int = 16384,
-    sampling_max_tokens: int = 8192,
-    temperature: float = 0.6,
-    top_p: float = 0.95,
+    model_id: str,
+    data_path: str,
+    output_path: str,
+    gpu_id: str,
+    max_tokens: int,
+    sampling_max_tokens: int,
+    temperature: float,
+    top_p: float,
+    math_prompt: str,
+    mcq_prompt: str,
 ):
     """
     Loads the model, runs it on the test set, and outputs the results.
@@ -121,7 +115,7 @@ def run_inference(
     # Build prompts
     prompts = []
     for item in data:
-        system, user = build_prompt(item["question"], item.get("options"))
+        system, user = build_prompt(item["question"], item.get("options"), math_prompt, mcq_prompt)
         
         # Format with chat template
         prompt_text = tokenizer.apply_chat_template(
@@ -158,6 +152,21 @@ def run_inference(
 
 
 if __name__ == "__main__":
-    # Example usage:
-    # run_inference(model_id="./results/qwen3_math_lora_merged", data_path="data/private.jsonl")
-    run_inference()
+    parser = argparse.ArgumentParser(description="Run inference with a specified config file.")
+    parser.add_argument("--config", type=str, default="config.yaml", help="Path to the config file (default: config.yaml)")
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+
+    run_inference(
+        model_id=config["MODEL_ID"],
+        data_path=config["DATA_PATH"],
+        output_path=config["OUTPUT_PATH"],
+        gpu_id=config["GPU_ID"],
+        max_tokens=config["MAX_TOKENS"],
+        sampling_max_tokens=config["SAMPLING_MAX_TOKENS"],
+        temperature=config["TEMPERATURE"],
+        top_p=config["TOP_P"],
+        math_prompt=config["SYSTEM_PROMPT_MATH"],
+        mcq_prompt=config["SYSTEM_PROMPT_MCQ"],
+    )
