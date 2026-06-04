@@ -65,12 +65,14 @@ def run_inference(
 
     llm = LLM(
         model=model_id,
+        quantization="bitsandbytes",
+        load_format="bitsandbytes",
         enable_prefix_caching=True,
-        gpu_memory_utilization=0.8,
+        gpu_memory_utilization=0.85,
         max_model_len=max_tokens,
         trust_remote_code=True,
         max_num_seqs=1024,
-        max_num_batched_tokens=max_tokens,
+        max_num_batched_tokens=81920,
     )
 
     sampling_params = SamplingParams(
