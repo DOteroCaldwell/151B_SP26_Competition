@@ -1,6 +1,9 @@
 import json
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# On regular container, nvcc is not installed
+# Sometimes, vllm will try to use flashinfer for sampling for some reason, disable it here
+os.environ["VLLM_USE_FLASHINFER_SAMPLER"] = "0"
 import re
 import sys
 import csv
@@ -72,7 +75,7 @@ def run_inference(
         max_model_len=max_tokens,
         trust_remote_code=True,
         max_num_seqs=1024,
-        max_num_batched_tokens=81920,
+        max_num_batched_tokens=65536,
     )
 
     sampling_params = SamplingParams(
