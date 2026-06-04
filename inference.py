@@ -35,6 +35,19 @@ def build_prompt(question: str, options: Optional[List[str]], math_prompt: str, 
         return mcq_prompt, f"{question}\n\nOptions:\n{opts_text}"
     return math_prompt, question
 
+def get_unique_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+    stem = path.stem
+    suffix = path.suffix
+    parent = path.parent
+    counter = 1
+    while True:
+        new_path = parent / f"{stem}_{counter}{suffix}"
+        if not new_path.exists():
+            return new_path
+        counter += 1
+
 
 def run_inference(
     model_id: str,
@@ -108,7 +121,7 @@ def run_inference(
     responses = [out.outputs[0].text.strip() for out in outputs]
 
     # Save Results
-    out_path = Path(output_path)
+    out_path = get_unique_path(Path(output_path))
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(out_path, "w") as f:
@@ -125,6 +138,27 @@ def run_inference(
             f.write(json.dumps(record) + "\n")
 
     print(f"Saved {len(responses)} records to {out_path}")
+
+    # For cleaning the file
+    csv_out_path = get_unique_path(Path("private_test_results.csv"))
+    with open(out_path, "r", encoding="utf-8") as infile, open(
+        csv_out_path, "w", encoding="utf-8", newline=""
+    ) as outfile:
+        writer = csv.DictWriter(outfile, fieldnames=["id", "response"])
+        writer.writeheader()
+
+        for line in infile:
+            if not line.strip():
+                continue
+
+            item = json.loads(line)
+            writer.writerow(
+                {
+                    "id": item.get("id", ""),
+                    "response": clean_response(item.get("response", "")),
+                }
+            )
+    print(f"Saved cleaned CSV to {csv_out_path}")
 
 
 if __name__ == "__main__":
