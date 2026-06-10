@@ -49,6 +49,47 @@ def get_unique_path(path: Path) -> Path:
         counter += 1
 
 
+def load_completed_ids(output_path: Path) -> set[Any]:
+    """Return IDs already present in an existing JSONL output file."""
+    completed_ids = set()
+    if not output_path.exists():
+        return completed_ids
+
+    with open(output_path, "r", encoding="utf-8") as f:
+        for line_number, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                print(f"Warning: Skipping malformed line {line_number} in {output_path}")
+                continue
+            if "id" in record:
+                completed_ids.add(record["id"])
+    return completed_ids
+
+
+def ensure_trailing_newline(path: Path) -> None:
+    if not path.exists() or path.stat().st_size == 0:
+        return
+    with open(path, "rb+") as f:
+        f.seek(-1, os.SEEK_END)
+        if f.read(1) != b"\n":
+            f.write(b"\n")
+
+
+def make_record(item: dict, response: str) -> dict:
+    record = {
+        "id": item.get("id"),
+        "is_mcq": bool(item.get("options")),
+        "response": response,
+    }
+    # If the original data had an 'answer' field (public set), we can keep it
+    if "answer" in item:
+        record["gold"] = item["answer"]
+    return record
+
+
 def run_inference(
     model_id: str,
     data_path: str,
@@ -60,6 +101,7 @@ def run_inference(
     top_p: float,
     math_prompt: str,
     mcq_prompt: str,
+    batch_size: int = 50,
 ):
     """
     Loads the model, runs it on the test set, and outputs the results.
@@ -101,43 +143,47 @@ def run_inference(
         repetition_penalty=1.1,
     )
 
-    # Build prompts
-    prompts = []
-    for item in data:
-        system, user = build_prompt(item["question"], item.get("options"), math_prompt, mcq_prompt)
-        
-        # Format with chat template
-        prompt_text = tokenizer.apply_chat_template(
-            [{"role": "system", "content": system},
-             {"role": "user",   "content": user}],
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-        prompts.append(prompt_text)
-
-    # Generate
-    print(f"Generating responses for {len(prompts)} questions...")
-    outputs = llm.generate(prompts, sampling_params=sampling_params, use_tqdm=True)
-    responses = [out.outputs[0].text.strip() for out in outputs]
-
-    # Save Results
-    out_path = get_unique_path(Path(output_path))
+    # Save incrementally so completed work survives crashes/restarts.
+    out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(out_path, "w") as f:
-        for item, response in zip(data, responses):
-            record = {
-                "id": item.get("id"),
-                "is_mcq": bool(item.get("options")),
-                "response": response
-            }
-            # If the original data had an 'answer' field (public set), we can keep it
-            if "answer" in item:
-                record["gold"] = item["answer"]
-                
-            f.write(json.dumps(record) + "\n")
+    completed_ids = load_completed_ids(out_path)
+    ensure_trailing_newline(out_path)
+    remaining_data = [item for item in data if item.get("id") not in completed_ids]
+    batch_size = max(1, batch_size)
 
-    print(f"Saved {len(responses)} records to {out_path}")
+    if completed_ids:
+        print(f"Found {len(completed_ids)} existing records in {out_path}; skipping them.")
+    print(f"Generating responses for {len(remaining_data)} remaining questions...")
+
+    saved_count = 0
+    with open(out_path, "a", encoding="utf-8") as f:
+        for start in tqdm(range(0, len(remaining_data), batch_size), desc="Inference batches"):
+            batch = remaining_data[start:start + batch_size]
+            prompts = []
+            for item in batch:
+                system, user = build_prompt(item["question"], item.get("options"), math_prompt, mcq_prompt)
+
+                # Format with chat template
+                prompt_text = tokenizer.apply_chat_template(
+                    [{"role": "system", "content": system},
+                     {"role": "user",   "content": user}],
+                    tokenize=False,
+                    add_generation_prompt=True,
+                )
+                prompts.append(prompt_text)
+
+            outputs = llm.generate(prompts, sampling_params=sampling_params, use_tqdm=False)
+            for item, output in zip(batch, outputs):
+                response = output.outputs[0].text.strip()
+                f.write(json.dumps(make_record(item, response)) + "\n")
+                saved_count += 1
+
+            f.flush()
+            os.fsync(f.fileno())
+
+    print(f"Saved {saved_count} new records to {out_path}")
+    print(f"Total records available in {out_path}: {len(completed_ids) + saved_count}")
 
     # For cleaning the file
     csv_out_path = get_unique_path(Path("private_test_results.csv"))
@@ -179,4 +225,5 @@ if __name__ == "__main__":
         top_p=config["TOP_P"],
         math_prompt=config["SYSTEM_PROMPT_MATH"],
         mcq_prompt=config["SYSTEM_PROMPT_MCQ"],
+        batch_size=config.get("BATCH_SIZE", 50),
     )
