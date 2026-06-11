@@ -225,5 +225,5 @@ if __name__ == "__main__":
         top_p=config["TOP_P"],
         math_prompt=config["SYSTEM_PROMPT_MATH"],
         mcq_prompt=config["SYSTEM_PROMPT_MCQ"],
-        batch_size=config.get("BATCH_SIZE", 50),
+        batch_size=config.get("BATCH_SIZE", 32),
     )
