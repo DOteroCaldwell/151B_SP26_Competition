@@ -1,0 +1,420 @@
+% =======> To use this template:
+% => Edit authors in this file.
+% => Edit the paper's content itself in the respective sections. Edit as needed
+% => Add any references to references.bib (cite with \cite or \citet)
+% =================================================
+
+\documentclass{article}
+
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{neurips_2024}
+% \PassOptionsToPackage{square,comma,sort,numbers}{natbib}
+\PassOptionsToPackage{numbers, compress}{natbib}
+% \usepackage[numbers]{natbib}
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+\usepackage[preprint]{neurips_2024}
+% \usepackage[nonatbib, preprint]{neurips_2024}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+% \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+% For maths/theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{float}
+% Use DeclareMathOperator and/or \newcommand to define abbreviations, e.g.:
+\DeclareMathOperator{\R}{\mathbb{R}} % real numbers
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{subcaption}
+\usepackage{booktabs} % for professional tables (https://www.ctan.org/pkg/booktabs)
+\usepackage{algorithm}  % For algorithms
+\usepackage{algorithmic}
+\usepackage{hyperref} % hyperref makes hyperlinks in the resulting PDF.
+\usepackage{wrapfig}  % For wrapping figures with text
+\usepackage[capitalize,noabbrev]{cleveref}   % For \cref
+\RequirePackage{doi}
+\usepackage{xcolor}         % colors
+\newcommand{\new}[1]{{\color{red} #1}}
+% Color references and URLs
+\usepackage{xcolor, colortbl}
+\definecolor{darkblue}{rgb}{0.19, 0.19, 0.62}
+\hypersetup{
+  colorlinks = true,
+  citecolor  = darkblue,
+  filecolor  = darkblue,
+  urlcolor   = darkblue,
+    % linkcolor  = myred,
+}
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+% \input{_macros}
+
+
+
+\title{
+CSE 151B/251B Final Report
+\\
+% {\small $<$Your-accessible-and-up-to-date-GitHub-URL$>$} % Note: You can put it in your abstracts or as a footnote in the first page, if you prefer. Note 2: Use \href or \url to link your URL.
+} 
+
+\author{%
+  David S.~Hippocampus
+  % \thanks{Use footnote for providing further information about author (webpage, alternative address)}
+  \\
+  Department of Computer Science\\
+  Cranberry-Lemon University\\
+  \texttt{hippo@cs.cranberry-lemon.edu} \\
+  % examples of more authors
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \AND
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+}
+\begin{document}
+\maketitle
+
+
+\begin{abstract}
+Check out \href{https://www.alignmentforum.org/posts/eJGptPbbFPZGLpjsp/highly-opinionated-advice-on-how-to-write-ml-papers#Abstract}{this blog post for tips on how to write a compelling abstract and paper.} \textbf{\textit{Include your final private Kaggle leaderboard score and/or rank, as well as a public Github repo link at the end of the abstract or introduction.}} Please write concisely. The main body of what you want graded in your submission must not be more than \textbf{8 pages}. You can have a supplemental to elaborate further on details that do not make your main body. 
+\end{abstract}
+
+\section*{Formatting instructions (remove this section in your submission)}
+Please read the instructions below carefully and follow them faithfully. You can keep the section headers but delete the instructional texts.
+\paragraph{Hints on writing}
+\begin{itemize}
+    \item Each paragraph should convey one main message, typically in the beginning sentence of the paragraph (topical sentence).
+    \item  Use simple sentences with fewer compounds or clauses. The simpler, the better. Avoid passive tense and use active tense.
+    \item Use PDF for your figures to ensure the resolution of your images.
+    \item The captions of Figures and Tables should contain sufficient details to be self-explanatory (readers can understand the figure without referring to the text).
+\end{itemize}
+
+
+Figures and tables must be appropriately referenced and discussed in the main text (tip: Use \textbackslash label\{fig:xyz\} and \textbackslash cref\{fig:xyz\}; example:~\cref{fig:example}). Captions must strive to be self-contained.
+\paragraph{Figures.}
+% \begin{figure}[h]  % Use figure or wrapfigure as needed.
+\begin{wrapfigure}{r}{0.4\textwidth} % Example: occupy 40% of text width
+  \vspace{-4mm}  % Force moving the figure up by a little bit
+  \centering
+  \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
+  \caption{Sample figure caption.}
+  \label{fig:example}
+\end{wrapfigure}
+% \end{figure}
+
+
+All artwork must be neat, clean, and legible. Lines should be dark enough for
+purposes of reproduction. The figure number and caption always appear after the figure. The figure caption should be lowercase (except for the first word and
+proper nouns); figures are numbered consecutively. Captions should be written clearly and, ideally, allow the reader to understand the key message of the figure without having to read the main text.
+
+
+\paragraph{Tables.}
+All tables must be centered, neat, clean, and legible.  The table number and
+title always appear before the table. See~\cref{sample-table} for an example.
+Captions should be written clearly and, ideally, allow the reader to understand the key message of the table without having to read the main text.
+\begin{table}[h]
+  \caption{Sample table title}
+  \label{sample-table}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    \multicolumn{2}{c}{Part}                   \\
+    \cmidrule(r){1-2}
+    Name     & Description     & Size ($\mu$m) \\
+    \midrule
+    Dendrite & Input terminal  & $\sim$100     \\
+    Axon     & Output terminal & $\sim$10      \\
+    Soma     & Cell body       & up to $10^6$  \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% % % === Introduction
+\section{Introduction[2 pt]}
+\label{sec:intro}
+Introduce the problem that you are trying to solve and write 1-2 paragraphs for each of the sub-sections.  Provide a high-level summary in this section instead of detailed descriptions. 
+
+
+\paragraph{Problem Definition.[0.25 pt]}
+Describe in your own words what the deep learning task is.  You may use figures to help your explanation.
+
+\paragraph{Problem Significance.[0.25 pt]}
+Explain  why is your problem important. Provide some real-world examples where successfully solving this task can have a great impact on our daily life and society. 
+
+\paragraph{Technical Challenge.[0.5 pt]}
+Why is this project difficult? Think about challenges from (1) data processing (2) model design (3) implementation (4) engineering (5) evaluation. 
+
+
+\new{
+\paragraph{Contributions. [1 pt]}
+On a high level, explain how existing work solves this problem and what its limitations/issues are. Describe how your final solution effectively addresses (some) of these limitations/issues. Be very precise and clear. Any empirical claims must be justified by your results. You may find it useful to explicitly enumerate your key contributions (e.g., a better architecture/loss function or a more suitable problem/data setup relative to the starter code, an insightful finding/result, an innovative technique or combination of existing techniques, etc.) as follows:
+
+% Find and cite (use \href{https://www.overleaf.com/learn/latex/Bibliography_management_with_bibtex}{BibTex
+% }) state-of-the-art works or papers that have tried to solve a similar problem (use \href{https://scholar.google.com/}{Google Scholar} to search). Point out the limitations of the state-of-the-art.
+
+
+Our main contributions are:
+\begin{itemize}
+  \item Contribution A: ...
+  \item Contribution B: ...  
+    % etc.
+\end{itemize}
+}
+% % % === Related Work
+\section{Related Work[1 pt]}
+\label{sec:relatedwork}
+Describe related papers and contextualize your own work with respect to them. If useful, you can reference and discuss them in the introduction too. Example:
+\paragraph{Related works topic 1. [0.5pt]} \citet{radford2018improving} introduced the first GPT-1 model...  % This is an example for citing (plz remove)
+
+\paragraph{Related works topic 2. [0.5pt]}
+% 
+
+% % % === Methods
+\section{Methods[4 pt]}
+\label{sec:methods}
+In this section, clearly describe the technical details of the problem and your approach. If needed, provide the necessary background and cite any sources that you used.
+
+
+\paragraph{Problem Setting.[1 pt]}
+Introduce the problem. Formulate your prediction task as an optimization problem and write out the objective (i.e., loss function) that you use to train your model. Describe the dataset. Define the inputs and outputs in mathematical language, describing their meaning in natural language. \textbf{Note:} \textit{The inputs and outputs here should correspond to what your model actually ingests and predicts, respectively}. 
+
+
+\paragraph{Idea Summary.[1 pt]}
+Describe and motivate your idea to solve the problem.  How is it different from the state-of-the-art method? Provide a sketch of your idea to illustrate your idea. Is there any risk associated with your idea? Provide alternative solutions if your idea does not work out.
+
+\new{
+\paragraph{Method Description.[2 pt]}
+Describe and motivate any relevant design or architectural choices that you explored.  
+If helpful, include a picture/sketch of your approach or architecture.
+
+How did you split the training and validation data? How did you normalize inputs and outputs? Detail any deviations from the starter code. If valuable, you may include visualizations of the data or diagrams/sketches of your approach.
+}
+
+
+% % % === Experiments
+\section{Experiments[6 pt]}
+\label{sec:experiments}
+% 
+In this section, clearly describe your empirical exploration of the problem and associated results. Provide evidence for your claims.
+Analyse and discuss your results.
+Note: Whenever you make claims such as \textit{Approach A performs ``better'' than approach B}, please be very specific in terms of \emph{what} it is better at and by \emph{how much}. Be transparent if it is only better on certain metrics, but not all.
+\subsection{Baselines[0.5 pt]}
+\label{sec:baselines}
+Describe all the baselines excluding the starter code. You should always start with simple models (such as a multi-layer Perceptron or linear regression) and gradually increase the complexity. You may use the starter code as a baseline, too.
+Use an itemized list to briefly summarize each of the models, their architecture, and parameters, and provide the correct reference if possible.
+
+We compare with the following baselines:
+\begin{itemize}
+    \item \textbf{Baseline A}:
+    \item \textbf{Baseline B}: 
+    % Etc.
+\end{itemize}
+% 
+\subsection{Evaluation[0.5 pt]}
+\label{sec:evaluation}
+Describe how you evaluate your model and baselines. There is no need to provide long explanations for the Kaggle evaluation, but clearly explain any complementary evaluations you explore in your project (if any).
+% 
+\subsection{Implementation details[2 pt]}
+\label{sec:implementation_details}
+We implemented the final Kaggle system as a fine-tuned Qwen3 reasoning model with a vLLM inference pipeline.  The final checkpoint used for submission was \texttt{alexcojo/Qwen3-Finetuned}, initialized from \texttt{Qwen/Qwen3-4B-Thinking-2507}.  We trained on UCSD's DSMLP platform using a single NVIDIA A30 GPU.  One full pass through the training set took approximately 3 hours and 45 minutes, so we used a single training epoch and focused the remaining compute budget on inference-time tuning.  For supervised fine-tuning, we used QLoRA with 4-bit NF4 BitsAndBytes loading, bfloat16 compute, LoRA rank $r=8$, LoRA $\alpha=32$, LoRA dropout $0.05$, and adapters applied to all linear layers.  The SFT run used per-device batch size 16, gradient accumulation 2, learning rate $2\times 10^{-4}$, cosine learning-rate scheduling, 100 warmup steps, gradient clipping at 0.3, and no intermediate checkpoint saving.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.75\linewidth]{../results/public_question_lengths.png}
+  \caption{Question-length distribution in the public set.  Long prompts made truncation control and sequence-length tuning important for the final inference pipeline.}
+  \label{fig:implementation_data}
+\end{figure}
+
+\begin{table}[t]
+  \caption{Free-form answer-format mix in the public dataset.  The large decimal and non-integer remainder groups motivated exact-answer prompting and careful use of the symbolic/numeric grader.}
+  \label{tab:free_form_answer_types_impl}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Free-form answer type & Count & Share \\
+    \midrule
+    Only whole-number answers & 159 & 21.2\% \\
+    Has decimal answer & 301 & 40.1\% \\
+    Rest & 291 & 38.7\% \\
+    \midrule
+    Total free-form questions & 751 & 100.0\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+At inference time, we loaded the model with vLLM and BitsAndBytes quantization.  The final private-test configuration used \texttt{max\_model\_len=16384}, \texttt{max\_tokens=8192} for generation, \texttt{temperature=0.6}, \texttt{top\_p=0.95}, \texttt{top\_k=20}, repetition penalty 1.1, prefix caching enabled, and \texttt{gpu\_memory\_utilization=0.85}.  We increased \texttt{max\_num\_batched\_tokens} to 65536 to maximize throughput on the A30 while keeping the run stable.  This larger batch-token budget was an engineering choice rather than a modeling change: it allowed vLLM to process more prompt and generation tokens per scheduling step, reducing wall-clock inference time without changing the model weights or decoding distribution.
+
+\begin{table}[t]
+  \caption{Temperature sweep on 200 public questions using the tuned prompt and a 32768-token generation budget.  Temperature 0.7 was best on this validation sweep, mainly through stronger free-form and multi-part free-form accuracy.}
+  \label{tab:temperature_sweep_impl}
+  \centering
+  \begin{tabular}{lcccc}
+    \toprule
+    Temperature & Overall & MCQ & Free-form & Multi-part FF \\
+    \midrule
+    0.3 & 64.5\% & 76.5\% & 58.3\% & 52.9\% \\
+    0.5 & 63.5\% & 77.9\% & 56.1\% & 48.5\% \\
+    0.6 & 64.5\% & 79.4\% & 56.8\% & 51.5\% \\
+    0.7 & \textbf{66.5\%} & 77.9\% & \textbf{60.6\%} & \textbf{57.4\%} \\
+    0.9 & 65.5\% & 77.9\% & 59.1\% & 54.4\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+We tuned three inference hyperparameters: sampling temperature, maximum sequence length, and batch-token budget.  The temperature sweep in \cref{tab:temperature_sweep_impl} tested $\{0.3,0.5,0.6,0.7,0.9\}$ on 200 public questions.  Temperature 0.7 gave the strongest public validation accuracy, but the final fine-tuned submission used temperature 0.6 because the fine-tuned checkpoint and final prompt were optimized for concise, lower-variance answers.  The max sequence length was tuned after Phase 2 full-dataset evaluation showed that 250 of 516 errors (48.4\%) had no closing \texttt{</think>} tag, indicating that the 8192-token limit often cut off the model before it emitted a final boxed answer.  Raising the generation budget to 32768 during validation improved the 200-question public sweep by roughly 9--12 percentage points over the Phase 2 full-dataset baseline, with the best run reaching 66.5\% overall accuracy.  For the final fine-tuned private run, we used a 16384-token model context and an 8192-token generation cap to balance answer completeness against DSMLP runtime and memory constraints.
+
+\begin{table}[t]
+  \caption{Final implementation settings used for the Kaggle inference pipeline.}
+  \label{tab:final_impl_settings}
+  \centering
+  \begin{tabular}{ll}
+    \toprule
+    Component & Final setting \\
+    \midrule
+    Platform & UCSD DSMLP, single NVIDIA A30 GPU \\
+    Final checkpoint & \texttt{alexcojo/Qwen3-Finetuned} \\
+    Base model & \texttt{Qwen/Qwen3-4B-Thinking-2507} \\
+    Fine-tuning method & 4-bit QLoRA SFT, 1 epoch \\
+    Training time & 3 hr 45 min per epoch \\
+    LoRA settings & $r=8$, $\alpha=32$, dropout 0.05, all linear layers \\
+    Optimizer schedule & learning rate $2\times10^{-4}$, cosine decay, 100 warmup steps \\
+    Training batch & per-device 16, gradient accumulation 2 \\
+    Inference temperature & 0.6 \\
+    Inference top-$p$ / top-$k$ & 0.95 / 20 \\
+    Max model length & 16384 \\
+    Max generated tokens & 8192 \\
+    vLLM batch-token budget & 65536 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+% 
+\subsection{Results[2 pt]}
+\label{sec:results}
+Present the results from \new{your final solution}. This can be a mix of quantitative results (e.g., validation metrics or leaderboard score) and qualitative results (e.g., example visualizations of predictions, case studies, etc.). Use figures and tables. You are welcome to include any negative findings/results.
+\paragraph{Result 1. [1 pt] Prompt engineering improves both MCQ and free-form accuracy.}
+We evaluated prompt engineering by comparing two full-public-set runs with the same 16k maximum sequence length.  The baseline run used the basic system prompt and was evaluated from \texttt{results/results\_basic.jsonl}.  The prompt-engineered run used \texttt{config-prompt.yaml} and was evaluated from \texttt{results/prompt\_results.jsonl}.  The engineered prompt made three practical changes: it asked the model to solve concisely, emphasized exact symbolic answers instead of decimals, and gave explicit output-format constraints for \texttt{\textbackslash boxed\{\}} answers and MCQ letters.  This improved overall accuracy from 59.68\% to 62.79\%, a gain of 3.11 percentage points.
+
+\begin{table}[t]
+  \caption{Baseline evaluation with 16k maximum sequence length.}
+  \label{tab:baseline_16k_results}
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    Category & Correct & Total & Accuracy \\
+    \midrule
+    MCQ & 271 & 375 & 72.27\% \\
+    Free-form & 401 & 751 & 53.40\% \\
+    Overall & 672 & 1126 & 59.68\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \caption{Prompt-engineered evaluation with 16k maximum sequence length.}
+  \label{tab:prompt_16k_results}
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    Category & Correct & Total & Accuracy \\
+    \midrule
+    MCQ & 283 & 375 & 75.47\% \\
+    Free-form & 424 & 751 & 56.46\% \\
+    Overall & 707 & 1126 & 62.79\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The gains were not limited to one question type.  MCQ accuracy increased by 3.20 percentage points, from 72.27\% to 75.47\%, while free-form accuracy increased by 3.06 percentage points, from 53.40\% to 56.46\%.  This suggests that the prompt changes improved both answer selection and final-answer formatting/parsing.  The free-form gain is especially important because those questions require the model to output expressions in a form that the symbolic grader can extract and compare.
+
+A representative example is public question 284, the triple integral
+\[
+\int_{0}^{1}\int_{-\sqrt{1-x^2}}^{\sqrt{1-x^2}}\int_{-\sqrt{1-x^2-y^2}}^{\sqrt{1-x^2-y^2}}1\,dz\,dy\,dx.
+\]
+The correct answer is option B, $2\pi/3$.  The baseline response selected option E, $4\pi/3$, because it recognized the unit sphere volume but failed to account for the outer bound $0 \leq x \leq 1$, which restricts the region to the right half of the sphere.  The prompt-engineered response converted the region to polar coordinates in the $xy$-plane, used $\theta \in [-\pi/2,\pi/2]$, and therefore integrated only half the disk projection.  It then matched the result $2\pi/3$ to option B.  This example illustrates the mechanism behind the improvement: the engineered prompt encouraged a shorter, more targeted derivation and a final answer in the required boxed-choice format, reducing the chance that the model followed a plausible but geometrically incomplete shortcut.
+\paragraph{Result 2. [1 pt]}
+% etc.
+
+
+
+\subsection{Ablations[1 pt]}
+\label{sec:ablations}
+{\new{Try to explore which design choices contribute to your final performance by removing/replacing individual components. Note that ablations are most convincing when you isolate the contribution of those individual components. For example, if you are comparing architecture A and architecture B, make sure to use the same hyperparameters as much as possible (or tune them for each architecture separately and compare the best version of each). Be clear but concise.
+}}
+
+% % % === Discussion
+\section{Discussion[2 pt]}
+\label{sec:discussion}
+Provide a few sentences to summarize your project. 
+
+\paragraph{Achievements. [0.5 pt]}
+What have you achieved? What is the significance of your contribution? Did you contribute to dataset curation, algorithm improvement or model development?  Summarize your achievement in quantitative terms. We value the effort that you have devoted to this project.
+
+
+
+\new{
+\paragraph{Bottlenecks and Mitigation. [0.5 pt]}
+What are bottlenecks of the project? How did you resolve them?  Any changes that you would like to highlight from the milestone?
+}
+
+
+% \paragraph{Plans Forward. [0.25 pt]}
+% What do you plan to do from now until the final report? Any change of plans from the initial proposal? What decision factors contributed to this change of plans?
+
+\new{
+\paragraph{Lessons Learned. [0.5 pt]}
+What did you learn from this project?   Brainstorm in different aspects including selecting problems, literature survey, team formulation and technical implementation. 
+If given more time, what aspects and how would you improve your project development?
+}
+
+\paragraph{Team Responsibilities. [0.5 pt]}
+Summarize the background and expertise for each of your team member. Clearly identify each person's role and contribution in this project.
+
+% \paragraph{Timelines. [0.75pt]}
+% Estimate the timeline with the milestones to achieve your expected outcome in this class, considering the discussion provided above.
+% \begin{itemize}
+%     \item Week 2: Fill in your milestones and deliverable
+%     \item Week 3:
+%     \item ...
+%     \item Week 10:
+% \end{itemize}
+
+
+\section*{LLM Usage}
+The use of LLMs is allowed as a general-purpose assist tool. However,  if LLMs played a significant role in research ideation and/or writing to the extent that they could be regarded as a contributor, then authors should describe the precise role of the LLM in this section on LLM usage. 
+
+Irrespective of the ways that LLMs were used in a given project, authors should understand that they take full responsibility for the contents written under their name, including content generated by LLMs that could be construed as plagiarism or scientific misconduct (e.g., fabrication of facts).  LLMs are not eligible for authorship.
+
+
+
+% % % === ACKNOWLEDGMENTS AND REFERENCES START
+% \section*{Acknowledgements}
+% This work was supported $\dots$.
+\bibliography{references.bib}
+\bibliographystyle{plainnat}  % Can also use abbrvnat, unsrt, etc.
+% 
+% % % === APPENDIX (optional)
+% \newpage
+% \appendix
+% \section*{Appendix}
+% \section{Appendix topic 1}
+% 
+\end{document}
