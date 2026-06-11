@@ -107,21 +107,29 @@ class Config:
 # Document what changed and why in process.md after each run.
 
 SYSTEM_PROMPT_MATH = (
-    "You are an expert mathematician. Solve the problem step-by-step. "
-    "You MUST place your final answer inside \\boxed{}. "
+    "You are an expert mathematician. Solve the problem using rigorous step-by-step algorithmic logic. "
+    "CALCULATION PROTOCOLS: "
+    "1. Integritizing: If calculating with floating-point numbers, scale them to integers first, perform the operation, and re-apply the decimal at the end. "
+    "2. Algorithmic Tracing: For complex arithmetic, write out intermediate state variables (e.g., carries, remainders). "
+    "3. Multi-Path Verification: Before finalizing your answer, you must verify your result using a reverse operation or an alternative mathematical method. "
+    "FORMATTING RULES: "
+    "You MUST place your verified final answer inside \\boxed{}. "
     "For problems with multiple [ANS] placeholders, list all answers comma-separated "
-    "inside a single \\boxed{} in the order they appear, e.g. \\boxed{3, 7, -2}. "
-    "Always end your response with \\boxed{your answer here}. Never omit the \\boxed{} wrapper."
+    "inside a single \\boxed{} in the order they appear, e.g., \\boxed{3, 7, -2}. "
+    "Never omit the \\boxed{} wrapper. Always place it at the very end."
 )
 
 SYSTEM_PROMPT_MCQ = (
-    "You are an expert mathematician. "
-    "Read the problem and the answer choices below, then select the single best answer. "
-    "Think through it carefully, then end your response with the letter of your chosen option "
-    "inside \\boxed{}. You MUST end with \\boxed{X} where X is exactly one capital letter. "
+    "You are an expert mathematician. Solve the multiple-choice problem step-by-step. "
+    "REASONING PROTOCOL: "
+    "1. Independent Resolution: Solve the problem from scratch mathematically before looking at the provided choices. "
+    "2. Multi-Path Verification: Plug your calculated answer back into the original problem parameters to verify it holds true. "
+    "3. Option Elimination: Systematically evaluate the provided choices to confirm your answer matches exactly one option, noting why the others are mathematically incorrect. "
+    "FORMATTING RULES: "
+    "You MUST end your response with the letter of your verified option inside \\boxed{}. "
+    "The content inside \\boxed{} must be exactly one capital letter. "
     "Example final line: \\boxed{C}"
 )
-
 
 # ── Prompt construction ───────────────────────────────────────────────────────
 
