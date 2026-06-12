@@ -4,7 +4,7 @@ MODEL_ID: "alexcojo/Qwen3-Finetuned"
 DATA_PATH: "data/public.jsonl"
 OUTPUT_PATH: "results/results_ft.jsonl"
 GPU_ID: "0"
-MAX_TOKENS: 16384
+MAX_TOKENS: 32768
 SAMPLING_MAX_TOKENS: 32768
 TEMPERATURE: 0.6
 TOP_P: 0.95
