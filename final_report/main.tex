@@ -201,7 +201,7 @@ Let $x = (q, O)$ be a math problem where $q$ is a natural-language question stri
 The dataset consists of 1,126 questions: 375 MCQ and 751 free-form. Of the free-form questions, 337 are single-part (one answer) and 414 are multi-part (two or more answers). There is no held-out training split for the public set; all 1,126 questions serve as a validation and development corpus.
 
 \paragraph{Idea Summary.[1 pt]}
-Our central finding is that the baseline's failures are dominated by \emph{output formatting},
+Our central finding is that the baseline's failures are dominated by {output formatting},
 not mathematical ability: 74.3\% of the 789 baseline errors are format-compliance failures
 (no \texttt{\textbackslash boxed\{\}} wrapper or no valid MCQ letter) rather than wrong answers.
 We therefore make the model reliably \emph{express} its answer in a form the SymPy-based judger
@@ -278,28 +278,8 @@ Note: Whenever you make claims such as \textit{Approach A performs ``better'' th
 \paragraph{Starter Code Baseline.}
 The starter code provides a reference implementation using HuggingFace Transformers with INT4 BitsAndBytes quantization. It uses generic system prompts and single-pass greedy-ish inference (temperature~0.6) without prompt engineering or majority voting.
 
-\paragraph{Phase~1 Mini-Baseline: 20-Question Diagnostic (Transformers, INT4).}
-Before running the full pipeline, we evaluate the first 20 public questions (9 MCQ, 11 free-form) under the Phase~1 prompt configuration using INT4 quantization via Transformers. This diagnostic run identifies error patterns quickly and confirms that the pipeline is functioning correctly. Results are presented in \cref{tab:minibaseline}.
-
-\begin{table}[h]
-  \caption{Phase~1 mini-baseline accuracy by question type (20 questions, Qwen3-4B INT4 via Transformers, temperature~0.6, max\_tokens~=~2048).}
-  \label{tab:minibaseline}
-  \centering
-  \begin{tabular}{lrr}
-    \toprule
-    Category & Correct / Total & Accuracy \\
-    \midrule
-    Overall & 5 / 20 & 25.0\% \\
-    MCQ & 1 / 9 & 11.1\% \\
-    Free-form (total) & 4 / 11 & 36.4\% \\
-    \quad Single-part & 3 / 4 & 75.0\% \\
-    \quad Multi-part & 1 / 7 & 14.3\% \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
 \paragraph{Phase~1 Full Baseline: All 1,126 Questions (vLLM, INT8).}
-We run inference on the complete public dataset using vLLM with INT8 BitsAndBytes quantization, which offers better throughput and memory efficiency than the Transformers INT4 path. The full results are presented in \cref{tab:fullbaseline}, and the error breakdown appears in \cref{tab:fullerrors}.
+We run inference on the complete public dataset using vLLM with INT8 BitsAndBytes quantization. The full results are presented in \cref{tab:fullbaseline}, and the error breakdown appears in \cref{tab:fullerrors}.
 
 \begin{table}[h]
   \caption{Phase~1 full-baseline accuracy by question type (1,126 questions, Qwen3-4B INT8 via vLLM, temperature~0.6, max\_tokens~=~2048). This is the primary reference baseline for all subsequent comparisons.}
@@ -352,14 +332,10 @@ We also report MCQ and free-form accuracy separately, with additional checks on 
 % 
 \subsection{Implementation details[2 pt]}
 \label{sec:implementation_details}
-We implemented the final Kaggle system as a fine-tuned Qwen3 reasoning model with a vLLM inference pipeline.  The final checkpoint used for submission was \texttt{alexcojo/Qwen3-Finetuned}, initialized from \texttt{Qwen/Qwen3-4B-Thinking-2507}.  We trained on UCSD's DSMLP platform using a single NVIDIA A30 GPU.  One full pass through the training set took approximately 3 hours and 45 minutes, so we used a single training epoch and focused the remaining compute budget on inference-time tuning.  For supervised fine-tuning, we used QLoRA with 4-bit NF4 BitsAndBytes loading, bfloat16 compute, LoRA rank $r=8$, LoRA $\alpha=32$, LoRA dropout $0.05$, and adapters applied to all linear layers.  The SFT run used per-device batch size 16, gradient accumulation 2, learning rate $2\times 10^{-4}$, cosine learning-rate scheduling, 100 warmup steps, gradient clipping at 0.3, and no intermediate checkpoint saving.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.75\linewidth]{public_question_lengths.png}
-  \caption{Question-length distribution in the public set.  Long prompts made truncation control and sequence-length tuning important for the final inference pipeline.}
-  \label{fig:implementation_data}
-\end{figure}
+The final Kaggle system is the fine-tuned \texttt{alexcojo/Qwen3-Finetuned} checkpoint (QLoRA over
+\texttt{Qwen/Qwen3-4B-Thinking-2507}; training hyperparameters in \cref{sec:methods}) served through a
+vLLM inference pipeline. Training ran on UCSD's DSMLP on a single NVIDIA A30 GPU; one epoch took about
+3~hr 45~min, so we used a single epoch and spent the remaining compute budget on inference-time tuning.
 
 \begin{table}[h]
   \caption{Free-form answer-format mix in the public dataset.  The large decimal and non-integer remainder groups motivated exact-answer prompting and careful use of the symbolic/numeric grader.}
@@ -398,7 +374,7 @@ At inference time, we loaded the model with vLLM and BitsAndBytes quantization. 
 \end{table}
 
 We tuned three inference hyperparameters: sampling temperature, maximum sequence length, and batch-token budget.  The temperature sweep in \cref{tab:temperature_sweep_impl} tested $\{0.3,0.5,0.6,0.7,0.9\}$ on 200 public questions.  Temperature 0.7 gave the strongest public validation accuracy, so the final fine-tuned submission used temperature 0.7.  The max sequence length was tuned after Phase 2 full-dataset evaluation showed that 250 of 516 errors (48.4\%) had no closing \texttt{</think>} tag, indicating that the 8192-token limit often cut off the model before it emitted a final boxed answer.  Raising the generation budget to 32768 during validation improved the 200-question public sweep by roughly 9--12 percentage points over the Phase 2 full-dataset baseline, with the best run reaching 66.5\% overall accuracy.  For the final fine-tuned private run, we used a 16384-token model context and an 8192-token generation cap to balance answer completeness against DSMLP runtime and memory constraints.
-% 
+
 \subsection{Results[2 pt]}
 \label{sec:results}
 \paragraph{Result 1. [1 pt] Prompt engineering improves both MCQ and free-form accuracy.}
@@ -498,61 +474,37 @@ accuracy comparison, but the error logs make the mechanism clear.
 % % % === Discussion
 \section{Discussion[2 pt]}
 \label{sec:discussion}
-Provide a few sentences to summarize your project. 
 
 \paragraph{Achievements. [0.5 pt]}
-What have you achieved? What is the significance of your contribution? Did you contribute to dataset curation, algorithm improvement or model development?  Summarize your achievement in quantitative terms. We value the effort that you have devoted to this project.
 
 Our project achieved measurable improvements in tool-free mathematical reasoning with a compact sub-5B language model. Starting from Qwen3-4B-Thinking, we found that many errors came from formatting, truncation, and failure to produce grader-compatible final answers rather than purely from incorrect reasoning. By redesigning the system prompt to encourage concise reasoning, exact symbolic answers, and strict boxed-answer formatting, we improved full public-set accuracy from 59.68\% to 62.79\%. This also improved both major question types, raising MCQ accuracy from 72.27\% to 75.47\% and free-form accuracy from 53.40\% to 56.46\%.
 
 We also contributed to model development and engineering by fine-tuning Qwen3-4B-Thinking with QLoRA on external math reasoning data and building an end-to-end Kaggle inference pipeline. The fine-tuned checkpoint improved over the original baseline, reaching 61.19\% overall accuracy and 74.40\% MCQ accuracy. Beyond accuracy, we identified truncation as a major bottleneck, tuned the generation budget and sampling temperature, and built a practical vLLM-based pipeline with quantization, checkpoint/resume support, and merged QLoRA deployment. Overall, our contribution was both an algorithmic improvement and a reliable experimental system for adapting compact reasoning models to math-heavy Kaggle tasks.
 
 \paragraph{Bottlenecks and Mitigation. [0.5 pt]}
-What are bottlenecks of the project? How did you resolve them?  Any changes that you would like to highlight from the milestone?
 
 The biggest bottleneck of the project was by far the inference time of the model. Generating an answer to one question could take upwards of five minutes depending on the difficulty of the question. This made it hard to create a feedback loop whereby we could see whether our additions had any improvement on the model. To resolve them, we aggressively batched model tokens to maximize throughput and increased GPU memory utilization to increase parallelization of question processing. For example, from the milestone, we batched tokens up to 65536, which meant we could process at least 2 questions at once with a max sequence length of 32768 tokens. 
 
 We also utilized a speculative decoder model in the same model family with five token prediction, which is where a smaller tries to predict 5 tokens and the bigger model verifies those 5 tokens fall within the same distribution. This proved somewhat effective. We used our resources like medium sized GPUs on DSMLP and A100s on Google Colab, which are datacenter class GPUs designed for this type of workload.
 
-
-
-% \paragraph{Plans Forward. [0.25 pt]}
-% What do you plan to do from now until the final report? Any change of plans from the initial proposal? What decision factors contributed to this change of plans?
-
 \paragraph{Lessons Learned. [0.5 pt]}
-What did you learn from this project?   Brainstorm in different aspects including selecting problems, literature survey, team formulation and technical implementation. 
-If given more time, what aspects and how would you improve your project development?
+This project taught us that both technical planning and team coordination are just as important as model design. Communication was sometimes difficult because our team had different schedules, backgrounds, and levels of availability, especially with one member commuting. We also learned that delegating tasks clearly matters: when multiple people worked on similar prompt-engineering ideas or code changes, merging everything cleanly through GitHub became harder.
 
-Communication was a huge challenge for us, considering the variety of backgrounds we came from. For example, one of our team-mates was a commuter, which meant we could not meet on campus all the time. Merging code on GitHub and delegating tasks was hard as well, as sometimes our work overlapped with each other (e.g. different prompt engineering techniques that was hard to combine into one). 
+Technically, we learned that running large language models is highly dependent on the environment. vLLM behaved differently across DSMLP, local machines, Google Colab, and cloud platforms, each with different GPU and memory constraints. We also learned that notebooks are useful for exploration, but not ideal for long inference or training jobs. In the future, we would set up a cleaner shared pipeline earlier, define clearer team roles, use scripts instead of notebooks for major experiments, and plan evaluations more systematically so we could test changes on representative subsets before running expensive full evaluations.
 
-Technically, one of the hardest challenges was getting the model in vLLM to work in different environments. Although DSMLP allowed us to use a unified platform, it was not always available, and we could not always use the same GPUs when it was available. This meant utilizing other platforms like local compute, Google Colab, and cloud compute like AWS and Azure. All these had unique constraints for running models, which meant we had to make some tradeoffs when designing the inference pipline.
-
-The model itself took a long time to run, which meant we had to limit the ways we tested the model. For instance, we would only test a small subset of the model, find the questions that were wrong, and make changes until those questions were right. Then we would run on a larger test set for a more representative sampling
-
-We have already learned many lessons that will carry well into future projects. While a Jupyter notebook was useful for data exploration, running models on it was impractical. Instead, we may use it for data exploration and small-scale testing, while more extensive testing 
 
 \paragraph{Team Responsibilities. [0.5 pt]}
-Summarize the background and expertise for each of your team member. Clearly identify each person's role and contribution in this project.
 
 Alexander Cojocaru - CS major with an interest in AI, specifically AI engineering and applying AI to practical application. Proficient in Python, C++, Pytorch, Pandas, and Java. Worked primarily on fine-tuning the model with QLoRA and prompt engineering, specifically using few-shot exemplars to guide the model in its thinking. Worked on some of the inference plumbing for running the model like getting vLLM to use speculative decoding and increasing batch size to reduce inference time. Created the final pipline to run the model for the Kaggle competition in inference.py and combined results from others in this final model. Outside of the code, contributed mostly to the Experiments, Introduction, and Discussion in the final report, as well as most of the slides in the final presentation.
 
 Shash Dudeja - Math and CS Major. Helped with testing and making slides for the final presentation.
 
 Diego Otero-Caldwell - Fourth-year CS undergraduate at UC San Diego. Led the prompt-and-sampling track (Track~A) and the project's experimental infrastructure. Built the Phase~1 baseline inference and error-categorization pipeline, then consolidated it into the standardized \texttt{testing\_template.py} harness with a single \texttt{Config} dataclass, per-phase output naming, and checkpoint/resume so multi-hour DSMLP jobs survive pod expiration. Ran the Phase~2 formatting-prompt experiments, the full-dataset validation that surfaced the 8192-token truncation bottleneck, and the Phase~3 work that raised the generation budget to 32{,}768 tokens and swept sampling temperature (selecting temp~0.7); also ran and documented the majority-vote self-consistency experiment that was ultimately rejected. Authored \texttt{docs/process.md}, the single source of truth for all run notes and decisions, plus the dataset-quality and DSMLP long-jobs strategy docs, and contributed to the report write-up including the Related Work section.
-% \paragraph{Timelines. [0.75pt]}
-% Estimate the timeline with the milestones to achieve your expected outcome in this class, considering the discussion provided above.
-% \begin{itemize}
-%     \item Week 2: Fill in your milestones and deliverable
-%     \item Week 3:
-%     \item ...
-%     \item Week 10:
-% \end{itemize}
-
 
 \section*{LLM Usage}
-The use of LLMs is allowed as a general-purpose assist tool. However,  if LLMs played a significant role in research ideation and/or writing to the extent that they could be regarded as a contributor, then authors should describe the precise role of the LLM in this section on LLM usage. 
-
-Irrespective of the ways that LLMs were used in a given project, authors should understand that they take full responsibility for the contents written under their name, including content generated by LLMs that could be construed as plagiarism or scientific misconduct (e.g., fabrication of facts).  LLMs are not eligible for authorship.
+We used LLM-based coding assistants for routine code scaffolding, debugging, and copy-editing of
+this report. All experimental design, runs, analysis, and empirical claims are our own, and we take
+full responsibility for the content. LLMs are not authors.
 
 
 
