@@ -67,16 +67,18 @@ CSE 151B/251B Final Report
 } 
 
 \author{%
-  David S.~Hippocampus
+  Alexander I. Cojocaru
   % \thanks{Use footnote for providing further information about author (webpage, alternative address)}
   \\
-  Department of Computer Science\\
-  Cranberry-Lemon University\\
-  \texttt{hippo@cs.cranberry-lemon.edu} \\
+  University of California San Diego\\
+  \texttt{acojocaru@ucsd.edu} \\
   % examples of more authors
-  % \And
+  \And
   % Coauthor \\
+  Diego Otero-Caldwell\\
   % Affiliation \\
+  University of California San Diego\\
+  \texttt{doterocaldwell@ucsd.edu} \\
   % Address \\
   % \texttt{email} \\
   % \AND
@@ -95,58 +97,9 @@ CSE 151B/251B Final Report
 
 
 \begin{abstract}
-Check out \href{https://www.alignmentforum.org/posts/eJGptPbbFPZGLpjsp/highly-opinionated-advice-on-how-to-write-ml-papers#Abstract}{this blog post for tips on how to write a compelling abstract and paper.} \textbf{\textit{Include your final private Kaggle leaderboard score and/or rank, as well as a public Github repo link at the end of the abstract or introduction.}} Please write concisely. The main body of what you want graded in your submission must not be more than \textbf{8 pages}. You can have a supplemental to elaborate further on details that do not make your main body. 
+Small language models are becoming surprisingly capable at math reasoning, but they still tend to break down on problems that require several careful steps. For this Kaggle competition, we explore whether a compact sub-5B model can be made more reliable without using external tools or scaling to a larger model. We fine-tune Qwen3-4B-Thinking with QLoRA on NuminaMath-CoT, then pair it with a structured prompting format that encourages the model to set up equations clearly, keep symbolic forms exact, check units, and delay numerical approximation until the end. This combination leads to cleaner intermediate reasoning and fewer obvious arithmetic or consistency mistakes. On the Kaggle competition public test set for CSE 151B, our approach improves the score from [baseline score] to [final score], and ablations suggest that fine-tuning and prompting work best when used together. While the model is still sensitive to formatting, the results show that careful adaptation can make small reasoning models more useful for math-heavy tasks under tool-free constraints.
 \end{abstract}
 
-\section*{Formatting instructions (remove this section in your submission)}
-Please read the instructions below carefully and follow them faithfully. You can keep the section headers but delete the instructional texts.
-\paragraph{Hints on writing}
-\begin{itemize}
-    \item Each paragraph should convey one main message, typically in the beginning sentence of the paragraph (topical sentence).
-    \item  Use simple sentences with fewer compounds or clauses. The simpler, the better. Avoid passive tense and use active tense.
-    \item Use PDF for your figures to ensure the resolution of your images.
-    \item The captions of Figures and Tables should contain sufficient details to be self-explanatory (readers can understand the figure without referring to the text).
-\end{itemize}
-
-
-Figures and tables must be appropriately referenced and discussed in the main text (tip: Use \textbackslash label\{fig:xyz\} and \textbackslash cref\{fig:xyz\}; example:~\cref{fig:example}). Captions must strive to be self-contained.
-\paragraph{Figures.}
-% \begin{figure}[h]  % Use figure or wrapfigure as needed.
-\begin{wrapfigure}{r}{0.4\textwidth} % Example: occupy 40% of text width
-  \vspace{-4mm}  % Force moving the figure up by a little bit
-  \centering
-  \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
-  \caption{Sample figure caption.}
-  \label{fig:example}
-\end{wrapfigure}
-% \end{figure}
-
-
-All artwork must be neat, clean, and legible. Lines should be dark enough for
-purposes of reproduction. The figure number and caption always appear after the figure. The figure caption should be lowercase (except for the first word and
-proper nouns); figures are numbered consecutively. Captions should be written clearly and, ideally, allow the reader to understand the key message of the figure without having to read the main text.
-
-
-\paragraph{Tables.}
-All tables must be centered, neat, clean, and legible.  The table number and
-title always appear before the table. See~\cref{sample-table} for an example.
-Captions should be written clearly and, ideally, allow the reader to understand the key message of the table without having to read the main text.
-\begin{table}[h]
-  \caption{Sample table title}
-  \label{sample-table}
-  \centering
-  \begin{tabular}{lll}
-    \toprule
-    \multicolumn{2}{c}{Part}                   \\
-    \cmidrule(r){1-2}
-    Name     & Description     & Size ($\mu$m) \\
-    \midrule
-    Dendrite & Input terminal  & $\sim$100     \\
-    Axon     & Output terminal & $\sim$10      \\
-    Soma     & Cell body       & up to $10^6$  \\
-    \bottomrule
-  \end{tabular}
-\end{table}
 
 % % % === Introduction
 \section{Introduction[2 pt]}
@@ -157,14 +110,23 @@ Introduce the problem that you are trying to solve and write 1-2 paragraphs for 
 \paragraph{Problem Definition.[0.25 pt]}
 Describe in your own words what the deep learning task is.  You may use figures to help your explanation.
 
+The basic task is to improve a compact model (sub 5 billion parameters) on mathematical reasoning from high-school to graduate level math problems. These questions are difficult, competition-level math problems that require extensive reasoning to solve and the model must output an answer to 8 digits of accuracy.
+
 \paragraph{Problem Significance.[0.25 pt]}
 Explain  why is your problem important. Provide some real-world examples where successfully solving this task can have a great impact on our daily life and society. 
 
+Compact models which process data and that can fit on consumer and other small devices is known as "edge computing". Currently, state of the art models require an internet connection and a subscription to access the latest intelligence capable of solving these problems. By getting small models to perform well on mathematical reasoning, we can enable more access to mathematical education. In developing countries without reliable internet, for example, cheaper local models can provide a benefit to children's education. It also improves privacy for those who want to use LLM's for math but may be uncomfortable with their data in another country's servers.
+
 \paragraph{Technical Challenge.[0.5 pt]}
 Why is this project difficult? Think about challenges from (1) data processing (2) model design (3) implementation (4) engineering (5) evaluation. 
+{
+The dataset for this model was a synthetic dataset, which contained some errors. One of the challenges was determining whether the model was at fault when answering these questions, or whether the question itself was faulty. To help with this, we passed some questions the model got incorrect to stronger LLMs and fixed the question or answer choices. 
 
+There was also inconsistency in how the reasoning traces in our finetuning data selected the final answer. To ensure consistency, we surrounded all answers in \\boxed{} text when fine tuning our model to align with the Kaggle competition.
 
-\new{
+Model design was another challenge. Small models have inherently less ability than larger models. While reasoning helped improve performance, the ultimate problem was getting the answers to within eight digits of accuracy according to the judger. This meant we had to make it do long calculations accurately, which proved exceptionally difficult as the model stubbornly stuck to rounding, we guess due to the model itself trying to make its answers palatable to humans.
+
+Evaluation was difficult due to time and hardware constraints. We only had limited time on DSMLP to run our model, and question generation to a long time to complete. This was also an engineering challenge, as we had to find a way to make the model run long enough that it did not take too long but not lose any accuracy.
 \paragraph{Contributions. [1 pt]}
 On a high level, explain how existing work solves this problem and what its limitations/issues are. Describe how your final solution effectively addresses (some) of these limitations/issues. Be very precise and clear. Any empirical claims must be justified by your results. You may find it useful to explicitly enumerate your key contributions (e.g., a better architecture/loss function or a more suitable problem/data setup relative to the starter code, an insightful finding/result, an innovative technique or combination of existing techniques, etc.) as follows:
 
@@ -182,33 +144,132 @@ Our main contributions are:
 % % % === Related Work
 \section{Related Work[1 pt]}
 \label{sec:relatedwork}
-Describe related papers and contextualize your own work with respect to them. If useful, you can reference and discuss them in the introduction too. Example:
-\paragraph{Related works topic 1. [0.5pt]} \citet{radford2018improving} introduced the first GPT-1 model...  % This is an example for citing (plz remove)
+\paragraph{Long chain-of-thought reasoning and inference-time scaling. [0.5pt]}
+Our base model, Qwen3-4B-Thinking, belongs to a recent class of long chain-of-thought (Long CoT)
+reasoners that emit extended \texttt{<think>} traces before answering, building on the original
+chain-of-thought \citep{wei2022chain} and self-consistency \citep{wang2022selfconsistency} prompting
+lines. \citet{chen2026longcot} survey this Long CoT era and catalog two phenomena that directly shaped
+our experiments: \emph{inference-time scaling}, where accuracy rises with the reasoning-token budget,
+and \emph{overthinking}, where traces grow unproductively long. Both appear in our Track~A results:
+enlarging the generation budget from 8{,}192 to 32{,}768 tokens removed a truncation bottleneck (48.4\%
+of Phase~2 errors had no closing \texttt{</think>} tag) and lifted accuracy by roughly 9--12 points,
+consistent with the scaling regime they describe. We also evaluated majority-vote self-consistency as a
+test-time lever. \citet{feng2026multipath} formalize the sample-efficiency of self-consistency and
+propose a hyperparameter-free adaptive scheme that matches fixed-budget voting with $\sim$6.8$\times$
+fewer samples; our own finding---that voting was not worth its cost because free-form errors were
+systematic rather than random across samples---is a complementary, model-specific negative result that
+their budget analysis helps explain.
 
-\paragraph{Related works topic 2. [0.5pt]}
-% 
+\paragraph{Tokenization and numeracy in language models. [0.5pt]}
+A persistent difficulty in our pipeline was the free-form questions whose gold answers are
+floating-point values, which the judger compares numerically rather than symbolically and which make up
+a large share of the free-form set (\cref{tab:free_form_answer_types_impl}). These items were
+consistently harder than MCQ or exact-symbolic questions: a single mis-computed digit fails the numeric
+check even when the setup is correct. Work on LLM numeracy explains why. \citet{singh2024tokenization}
+show that number tokenization choices materially affect arithmetic accuracy in frontier models---numbers
+are often split into multiple tokens in inconsistent ways---and that simple inference-time interventions
+such as right-to-left digit grouping reduce computation errors. Their findings reinforce our
+interpretation that many of our floating-point free-form failures stem from how numbers are produced and
+parsed at the token level rather than from flawed reasoning, and they point to tokenizer-aware answer
+handling as a promising, training-free direction for the numeric questions that limited our free-form
+accuracy.
+%
 
-% % % === Methods
 \section{Methods[4 pt]}
 \label{sec:methods}
-In this section, clearly describe the technical details of the problem and your approach. If needed, provide the necessary background and cite any sources that you used.
-
 
 \paragraph{Problem Setting.[1 pt]}
-Introduce the problem. Formulate your prediction task as an optimization problem and write out the objective (i.e., loss function) that you use to train your model. Describe the dataset. Define the inputs and outputs in mathematical language, describing their meaning in natural language. \textbf{Note:} \textit{The inputs and outputs here should correspond to what your model actually ingests and predicts, respectively}. 
+Let $x = (q, O)$ be a math problem where $q$ is a natural-language question string and $O = \{o_1, \ldots, o_k\}$ is an optional set of answer choices (present for MCQ, absent for free-form). The model produces a response string $\hat{y}$, from which an answer $\hat{a}$ is extracted. For MCQ problems, $\hat{a}$ is a single letter from $\{A, B, \ldots, J\}$; for free-form problems, $\hat{a}$ is a numerical value, symbolic expression, or comma-separated list of sub-answers. A response is scored as correct under three conditions depending on the ground truth $y^*$: exact case-insensitive letter match for MCQ; symbolic equivalence under SymPy simplification (difference reduces to zero) for expressions; and absolute numeric agreement within tolerance $\epsilon = 10^{-8}$ for floating-point values. For multi-part free-form questions ($m \geq 2$ sub-answers), all $m$ components must be individually correct.
 
+The dataset consists of 1,126 questions: 375 MCQ and 751 free-form. Of the free-form questions, 337 are single-part (one answer) and 414 are multi-part (two or more answers). There is no held-out training split for the public set; all 1,126 questions serve as a validation and development corpus.
 
 \paragraph{Idea Summary.[1 pt]}
-Describe and motivate your idea to solve the problem.  How is it different from the state-of-the-art method? Provide a sketch of your idea to illustrate your idea. Is there any risk associated with your idea? Provide alternative solutions if your idea does not work out.
+Our central finding is that the baseline's failures are dominated by \emph{output formatting},
+not mathematical ability: on the full public set, 74.3\% of the 789 baseline errors are
+format-compliance failures (no \texttt{\textbackslash boxed\{\}} wrapper, or no valid MCQ
+letter) rather than wrong answers. This provides an easy target for improvement, we attempt
+make the model reliably \emph{express} its answer in a form the SymPy-based judger accepts. We attacked the task along a ladder of increasingly expensive levers: (i) rewrite the system
+prompts to enforce the answer format; (ii) enlarge the generation budget so Qwen3's extended
+\texttt{<think>} traces are not truncated before the boxed answer; (iii) steer the answer
+\emph{form} toward exact algebraic notation that survives symbolic equivalence checking; and
+(iv) fine-tune the model to internalize that behaviour. We ran these experiments along two
+complementary tracks (detailed below) and submitted the pipeline at the intersection of their
+conclusions. The principal risk is that the largest lever, fine-tuning, overfits to noisy public
+labels; we mitigate this by training on external, cleaner corpora rather than the public set, and
+by keeping the prompt-only pipeline as a fallback. We also evaluated majority-vote
+self-consistency as an alternative to fine-tuning and rejected it
+(see Method Description).
 
-\new{
+
 \paragraph{Method Description.[2 pt]}
-Describe and motivate any relevant design or architectural choices that you explored.  
-If helpful, include a picture/sketch of your approach or architecture.
+We organized the work as two parallel tracks that share the same model, judger, and DSMLP
+hardware but differ in experimental unit. \emph{Track~A} is a single parameterized harness
+(\texttt{testing\_template.py}) that changes one variable per phase and measures the accuracy
+delta on the public set; \emph{Track~B} is a config-driven A/B framework (\texttt{inference.py}
+plus a matrix of YAML files) that swaps whole pipelines and adds supervised fine-tuning. The
+tracks converged on a single submitted configuration.
 
-How did you split the training and validation data? How did you normalize inputs and outputs? Detail any deviations from the starter code. If valuable, you may include visualizations of the data or diagrams/sketches of your approach.
-}
+\emph{Track~A — phased prompt and sampling experiments.} The harness exposes every tunable
+(model, prompts, sampling, token budget, voting count) as one \texttt{Config} dataclass and bakes
+the phase name into all output filenames, so runs never overwrite one another and a prior run's
+summary can be loaded for automatic delta reporting. \textbf{Phase~1} establishes the generic
+baseline. \textbf{Phase~2} rewrites both system prompts to make the
+\texttt{\textbackslash boxed\{\}} requirement a hard constraint (introducing ``MUST'' language and
+a concrete example of the expected final line) and raises the per-response budget from 2{,}048 to
+8{,}192 tokens. \textbf{Phase~3} raises the budget again to 32{,}768—after we found that 48.4\% of
+the remaining Phase~2 errors had no closing \texttt{</think>} tag, i.e.\ the model ran out of
+tokens mid-reasoning—and then sweeps the sampling temperature over
+$\{0.3, 0.5, 0.6, 0.7, 0.9\}$. We additionally tested majority-vote self-consistency with
+$N \in \{3, 5, 7\}$ samples per question but {abandoned} it: on free-form questions the model
+repeats the same systematic error across samples (so voting cannot recover the answer), and at
+32{,}768 tokens an $N{=}3$ run exceeds 20 hours, beyond a single DSMLP pod's lifetime. The harness
+supports per-$N$-question checkpointing and resume so multi-hour runs survive pod expiration.
 
+\emph{Track~B — config A/B and QLoRA fine-tuning.} \texttt{inference.py} runs an end-to-end
+pipeline from a YAML file (model ID, prompts, decoding, data path) with resumable JSONL output and
+automatic CSV export for submission. We used a matrix of configs to isolate each factor against a
+minimal-prompt control: token budget alone (\texttt{config-32k}), an \emph{engineered} prompt
+alone (\texttt{config-prompt}), their combination (\texttt{config-prompt\_32k}), and the
+fine-tuned model alone (\texttt{config-ft}). The engineered prompt is the key design artifact of
+this track: it instructs the model to answer in exact algebraic / ASCII-math form
+(\texttt{sqrt(2)} not \texttt{1.414}, \texttt{pi} not \texttt{3.14159}, trigonometric functions
+allowed when SymPy-recognizable), to never place LaTeX or curly braces inside
+\texttt{\textbackslash boxed\{\}} (\texttt{2\^{}(-36/31)} not \texttt{2\^{}\{-36/31\}}), and to
+reason concisely; it also carries worked few-shot exemplars for both question types. The
+motivation is judger-driven: decimals and brace-laden LaTeX caused symbolic-equivalence false
+negatives, so constraining the answer form raised accuracy. 
+
+For fine-tuning we apply QLoRA to \texttt{Qwen3-4B-Thinking-2507}: the base weights are loaded in
+4-bit NormalFloat (NF4) with double quantization and bfloat16 compute, and we train a low-rank
+adapter ($r{=}8$, $\alpha{=}32$, dropout $0.05$, applied to all linear layers, \textasciitilde16.5M
+trainable parameters or 0.41\% of the model). We use the TRL \texttt{SFTTrainer} for one epoch at
+learning rate $2\!\times\!10^{-4}$ with a cosine schedule, 100 warmup steps, gradient clipping at
+0.3, and an effective batch size of 32 (per-device 16 $\times$ gradient accumulation 2). Training
+examples are 2{,}500 shuffled problem/solution pairs from \texttt{AI-MO/NuminaMath-CoT}, each
+wrapped in the \emph{same} engineered system prompt used at inference so the adapter learns to obey
+the exact-form convention; earlier iterations also drew on \texttt{tiedong/goat} (arithmetic
+accuracy) and the MATH corpus, with GSM8K as
+reference for problem setup. Crucially, we do \emph{not} fine-tune on the public competition set,
+whose gold labels we found to be noisy, avoiding overfitting to label errors. The trained adapter
+is merged into the base weights (\texttt{merge\_and\_unload}) and published to the Hugging Face Hub
+as \texttt{alexcojo/Qwen3-Finetuned} so that vLLM can serve it without runtime adapter loading.
+
+\emph{Final submitted system.} The submission (\texttt{config.yaml}) combines the two tracks: the
+fine-tuned \texttt{alexcojo/Qwen3-Finetuned} model, the engineered exact-form system prompts, a
+16{,}384-token context with an 8{,}192-token generation cap, and sampling at temperature 0.7,
+top-$p$ 0.95, top-$k$ 20. It is run over the 943-question private set through vLLM with
+BitsAndBytes quantization; because the private set has no gold labels, scoring is deferred to the
+competition leaderboard.
+
+\emph{Implementation details.} All inference and training run on UCSD's DSMLP, on a single NVIDIA
+RTX PRO 6000 Blackwell GPU (24~GB VRAM). We serve the model with vLLM and BitsAndBytes
+quantization throughout, and set \texttt{VLLM\_USE\_DEEP\_GEMM=0} before importing vLLM to avoid a
+DeepGEMM kernel crash on the Blackwell architecture. The starter pipeline is unchanged in
+structure; our deviations are the prompt redesign, the enlarged token budget, the YAML-config and
+phased-harness drivers, and the QLoRA adapter. To keep multi-hour jobs alive within pod time
+limits we use a three-layer strategy—\texttt{tmux}, an explicit pod deadline, and
+checkpoint/resume—so an interrupted run restarts from the last completed question rather than from
+scratch.
 
 % % % === Experiments
 \section{Experiments[6 pt]}
@@ -239,12 +300,12 @@ We implemented the final Kaggle system as a fine-tuned Qwen3 reasoning model wit
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.75\linewidth]{../results/public_question_lengths.png}
+  \includegraphics[width=0.75\linewidth]{public_question_lengths.png}
   \caption{Question-length distribution in the public set.  Long prompts made truncation control and sequence-length tuning important for the final inference pipeline.}
   \label{fig:implementation_data}
 \end{figure}
 
-\begin{table}[t]
+\begin{table}[h]
   \caption{Free-form answer-format mix in the public dataset.  The large decimal and non-integer remainder groups motivated exact-answer prompting and careful use of the symbolic/numeric grader.}
   \label{tab:free_form_answer_types_impl}
   \centering
@@ -261,7 +322,7 @@ We implemented the final Kaggle system as a fine-tuned Qwen3 reasoning model wit
   \end{tabular}
 \end{table}
 
-At inference time, we loaded the model with vLLM and BitsAndBytes quantization.  The final private-test configuration used \texttt{max\_model\_len=16384}, \texttt{max\_tokens=8192} for generation, \texttt{temperature=0.6}, \texttt{top\_p=0.95}, \texttt{top\_k=20}, repetition penalty 1.1, prefix caching enabled, and \texttt{gpu\_memory\_utilization=0.85}.  We increased \texttt{max\_num\_batched\_tokens} to 65536 to maximize throughput on the A30 while keeping the run stable.  This larger batch-token budget was an engineering choice rather than a modeling change: it allowed vLLM to process more prompt and generation tokens per scheduling step, reducing wall-clock inference time without changing the model weights or decoding distribution.
+At inference time, we loaded the model with vLLM and BitsAndBytes quantization.  The final private-test configuration used \texttt{max\_model\_len=16384}, \texttt{max\_tokens=8192} for generation, \texttt{temperature=0.7}, \texttt{top\_p=0.95}, \texttt{top\_k=20}, repetition penalty 1.1, prefix caching enabled, and \texttt{gpu\_memory\_utilization=0.85}.  We increased \texttt{max\_num\_batched\_tokens} to 65536 to maximize throughput on the A30 while keeping the run stable.  This larger batch-token budget was an engineering choice rather than a modeling change: it allowed vLLM to process more prompt and generation tokens per scheduling step, reducing wall-clock inference time without changing the model weights or decoding distribution.
 
 \begin{table}[t]
   \caption{Temperature sweep on 200 public questions using the tuned prompt and a 32768-token generation budget.  Temperature 0.7 was best on this validation sweep, mainly through stronger free-form and multi-part free-form accuracy.}
@@ -280,7 +341,7 @@ At inference time, we loaded the model with vLLM and BitsAndBytes quantization. 
   \end{tabular}
 \end{table}
 
-We tuned three inference hyperparameters: sampling temperature, maximum sequence length, and batch-token budget.  The temperature sweep in \cref{tab:temperature_sweep_impl} tested $\{0.3,0.5,0.6,0.7,0.9\}$ on 200 public questions.  Temperature 0.7 gave the strongest public validation accuracy, but the final fine-tuned submission used temperature 0.6 because the fine-tuned checkpoint and final prompt were optimized for concise, lower-variance answers.  The max sequence length was tuned after Phase 2 full-dataset evaluation showed that 250 of 516 errors (48.4\%) had no closing \texttt{</think>} tag, indicating that the 8192-token limit often cut off the model before it emitted a final boxed answer.  Raising the generation budget to 32768 during validation improved the 200-question public sweep by roughly 9--12 percentage points over the Phase 2 full-dataset baseline, with the best run reaching 66.5\% overall accuracy.  For the final fine-tuned private run, we used a 16384-token model context and an 8192-token generation cap to balance answer completeness against DSMLP runtime and memory constraints.
+We tuned three inference hyperparameters: sampling temperature, maximum sequence length, and batch-token budget.  The temperature sweep in \cref{tab:temperature_sweep_impl} tested $\{0.3,0.5,0.6,0.7,0.9\}$ on 200 public questions.  Temperature 0.7 gave the strongest public validation accuracy, so the final fine-tuned submission used temperature 0.7.  The max sequence length was tuned after Phase 2 full-dataset evaluation showed that 250 of 516 errors (48.4\%) had no closing \texttt{</think>} tag, indicating that the 8192-token limit often cut off the model before it emitted a final boxed answer.  Raising the generation budget to 32768 during validation improved the 200-question public sweep by roughly 9--12 percentage points over the Phase 2 full-dataset baseline, with the best run reaching 66.5\% overall accuracy.  For the final fine-tuned private run, we used a 16384-token model context and an 8192-token generation cap to balance answer completeness against DSMLP runtime and memory constraints.
 
 \begin{table}[t]
   \caption{Final implementation settings used for the Kaggle inference pipeline.}
@@ -298,7 +359,7 @@ We tuned three inference hyperparameters: sampling temperature, maximum sequence
     LoRA settings & $r=8$, $\alpha=32$, dropout 0.05, all linear layers \\
     Optimizer schedule & learning rate $2\times10^{-4}$, cosine decay, 100 warmup steps \\
     Training batch & per-device 16, gradient accumulation 2 \\
-    Inference temperature & 0.6 \\
+    Inference temperature & 0.7 \\
     Inference top-$p$ / top-$k$ & 0.95 / 20 \\
     Max model length & 16384 \\
     Max generated tokens & 8192 \\
@@ -309,9 +370,8 @@ We tuned three inference hyperparameters: sampling temperature, maximum sequence
 % 
 \subsection{Results[2 pt]}
 \label{sec:results}
-Present the results from \new{your final solution}. This can be a mix of quantitative results (e.g., validation metrics or leaderboard score) and qualitative results (e.g., example visualizations of predictions, case studies, etc.). Use figures and tables. You are welcome to include any negative findings/results.
 \paragraph{Result 1. [1 pt] Prompt engineering improves both MCQ and free-form accuracy.}
-We evaluated prompt engineering by comparing two full-public-set runs with the same 16k maximum sequence length.  The baseline run used the basic system prompt and was evaluated from \texttt{results/results\_basic.jsonl}.  The prompt-engineered run used \texttt{config-prompt.yaml} and was evaluated from \texttt{results/prompt\_results.jsonl}.  The engineered prompt made three practical changes: it asked the model to solve concisely, emphasized exact symbolic answers instead of decimals, and gave explicit output-format constraints for \texttt{\textbackslash boxed\{\}} answers and MCQ letters.  This improved overall accuracy from 59.68\% to 62.79\%, a gain of 3.11 percentage points.
+We evaluated prompt engineering by comparing two full-public-set runs.  The baseline run used the basic system prompt and parameters in the starter code.  The prompt-engineered run used the prompt that we used in the final model.  The engineered prompt made three practical changes: it asked the model to solve concisely, emphasized exact symbolic answers instead of decimals, and gave explicit output-format constraints for \texttt{\textbackslash boxed\{\}} answers and MCQ letters.  This improved overall accuracy from 59.68\% to 62.79\%, a gain of 3.11 percentage points.
 
 \begin{table}[t]
   \caption{Baseline evaluation with 16k maximum sequence length.}
@@ -350,15 +410,68 @@ A representative example is public question 284, the triple integral
 \int_{0}^{1}\int_{-\sqrt{1-x^2}}^{\sqrt{1-x^2}}\int_{-\sqrt{1-x^2-y^2}}^{\sqrt{1-x^2-y^2}}1\,dz\,dy\,dx.
 \]
 The correct answer is option B, $2\pi/3$.  The baseline response selected option E, $4\pi/3$, because it recognized the unit sphere volume but failed to account for the outer bound $0 \leq x \leq 1$, which restricts the region to the right half of the sphere.  The prompt-engineered response converted the region to polar coordinates in the $xy$-plane, used $\theta \in [-\pi/2,\pi/2]$, and therefore integrated only half the disk projection.  It then matched the result $2\pi/3$ to option B.  This example illustrates the mechanism behind the improvement: the engineered prompt encouraged a shorter, more targeted derivation and a final answer in the required boxed-choice format, reducing the chance that the model followed a plausible but geometrically incomplete shortcut.
-\paragraph{Result 2. [1 pt]}
-% etc.
+
+\paragraph{Result 2. [1 pt] Fine-tuning improves overall accuracy, especially on MCQ questions.}
+After prompt engineering, we fine-tuned the model and evaluated the resulting checkpoint on the full public set.  Fine-tuning raised overall accuracy to 61.19\%, with 689 correct answers out of 1126 total questions.  The largest category-level improvement came from MCQ questions: the fine-tuned model answered 279 of 375 MCQ questions correctly, reaching 74.40\% accuracy.  This suggests that fine-tuning helped the model better map its reasoning to the discrete answer choices, which is especially useful when several answer options are numerically or symbolically close.
+
+\begin{table}[t]
+  \caption{Fine-tuned model evaluation on the full public set.}
+  \label{tab:finetuned_public_results}
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    Category & Correct & Total & Accuracy \\
+    \midrule
+    MCQ & 279 & 375 & 74.40\% \\
+    Free-form & 410 & 751 & 54.59\% \\
+    Overall & 689 & 1126 & 61.19\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The fine-tuned model also improved free-form performance to 410 correct answers out of 751, or 54.59\%.  This gain matters because free-form questions require both solving the problem and expressing the answer in a grader-compatible form.  However, the MCQ improvement was the clearest effect: compared with the original baseline in \cref{tab:baseline_16k_results}, MCQ accuracy increased from 72.27\% to 74.40\%, while free-form accuracy increased from 53.40\% to 54.59\%.  Overall, fine-tuning improved the model from 59.68\% to 61.19\%, showing that supervised adaptation improved the model beyond prompt engineering alone.
 
 
 
 \subsection{Ablations[1 pt]}
 \label{sec:ablations}
-{\new{Try to explore which design choices contribute to your final performance by removing/replacing individual components. Note that ablations are most convincing when you isolate the contribution of those individual components. For example, if you are comparing architecture A and architecture B, make sure to use the same hyperparameters as much as possible (or tune them for each architecture separately and compare the best version of each). Be clear but concise.
-}}
+We ablated the inference-time choices while keeping the underlying model fixed to
+\texttt{Qwen/Qwen3-4B-Thinking-2507}.  The cleanest ablation was prompt engineering:
+\texttt{config-basic.yaml} and \texttt{config-prompt.yaml} use the same model, public
+dataset, \texttt{MAX\_TOKENS=16384}, \texttt{SAMPLING\_MAX\_TOKENS=32768},
+temperature 0.6, and \texttt{top\_p=0.95}; only the system prompts differ.  Under this
+controlled comparison, the engineered prompt improved overall public accuracy from
+59.68\% to 62.79\%, with similar gains on MCQ and free-form questions.  This supports the
+claim that the prompt changes improved more than formatting alone: the model became more
+likely to produce exact, grader-compatible answers while preserving the same decoding
+budget.
+
+We also ablated sampling temperature with the same engineered prompt, same base model, and
+the same 32768-token generation budget.  The sweep in \texttt{docs/process.md} evaluated
+temperatures $\{0.3,0.5,0.6,0.7,0.9\}$ on the same 200 public questions.  MCQ accuracy was
+nearly flat across the sweep, ranging only from 76.5\% to 79.4\%, but free-form accuracy
+was more sensitive.  Temperature 0.7 was best overall at 66.5\%, mainly because it improved
+multi-part free-form accuracy to 57.4\%.  This suggests that a slightly higher temperature
+helped the model explore alternate solution paths on harder open-ended problems, while MCQ
+questions were less dependent on sampling diversity.
+
+The maximum generation budget was another important ablation, although it was less
+perfectly controlled because it changed the runtime profile substantially.  In the Phase~2
+full-public run with an 8192-token budget, 250 of 516 errors (48.4\%) lacked a closing
+\texttt{</think>} tag, indicating that the model was often cut off before emitting its
+final boxed answer.  Raising the budget to 32768 tokens removed this truncation bottleneck
+for the Phase~3 sweep: every temperature setting in the 32768-token sweep landed around
+63.5--66.5\% overall, well above the 54.2\% Phase~2 full-public result.  Because the sample
+sizes differ, we treat this as directional evidence rather than a perfectly isolated
+accuracy comparison, but the error logs make the mechanism clear.
+
+Finally, we tested majority voting as a self-consistency ablation.  With temperature 0.7,
+\texttt{n\_samples=3}, and the 32768-token budget, the run was stopped after 100 of 200
+questions because the compute cost exceeded DSMLP pod limits.  The partial result was
+63.0\% overall, compared with 66.5\% for the single-sample temperature-0.7 sweep; MCQ
+improved slightly but free-form dropped from 60.6\% to 51.6\%.  This negative result
+suggests that many free-form errors were systematic math errors rather than random
+sampling mistakes, so majority voting was not worth the large throughput cost.
 
 % % % === Discussion
 \section{Discussion[2 pt]}
@@ -368,26 +481,46 @@ Provide a few sentences to summarize your project.
 \paragraph{Achievements. [0.5 pt]}
 What have you achieved? What is the significance of your contribution? Did you contribute to dataset curation, algorithm improvement or model development?  Summarize your achievement in quantitative terms. We value the effort that you have devoted to this project.
 
+Our project achieved meaningful improvements in tool-free mathematical reasoning with a compact sub-5B language model. Starting from Qwen3-4B-Thinking, we showed that much of the model’s poor performance came not only from incorrect reasoning, but also from answer formatting, truncation, and failure to produce grader-compatible final outputs. By redesigning the system prompt to encourage concise reasoning, exact symbolic answers, and strict boxed-answer formatting, we improved full public-set accuracy from 59.68\% to 62.79\%. This gain was consistent across question types, raising MCQ accuracy from 72.27\% to 75.47\% and free-form accuracy from 53.40\% to 56.46\%.
 
+We also contributed to model development by fine-tuning Qwen3-4B-Thinking using QLoRA supervised fine-tuning on external math reasoning data. The fine-tuned checkpoint improved over the original baseline, reaching 61.19\% overall accuracy and 74.40\% MCQ accuracy on the full public set. Although prompt engineering was the strongest single intervention in our reported results, fine-tuning demonstrated that a small reasoning model can be adapted efficiently with only a small fraction of trainable parameters.
 
-\new{
+We identified truncation as a key bottleneck after finding that many failed responses did not finish their reasoning trace or produce a final answer. Increasing the generation budget reduced this failure mode and helped validation accuracy reach as high as 66.5\% in our temperature sweep. We also tested majority-vote self-consistency and found that it was not worth the additional compute cost, since many free-form errors were systematic rather than random.
+
+Finally, we built a practical end-to-end Kaggle inference pipeline under real compute constraints. This included vLLM-based inference, BitsAndBytes quantization, YAML-based experiment configs, checkpoint/resume support, larger batch-token scheduling, and QLoRA model merging for deployment. Overall, our contribution was not just a single model improvement, but a complete experimental pipeline for making compact reasoning models more reliable on math-heavy Kaggle tasks.
+
 \paragraph{Bottlenecks and Mitigation. [0.5 pt]}
 What are bottlenecks of the project? How did you resolve them?  Any changes that you would like to highlight from the milestone?
-}
+
+The biggest bottleneck of the project was by far the inference time of the model. Generating an answer to one question could take upwards of five minutes depending on the difficulty of the question. This made it hard to create a feedback loop whereby we could see whether our additions had any improvement on the model. To resolve them, we aggressively batched model tokens to maximize throughput and increased GPU memory utilization to increase parallelization of question processing. For example, from the milestone, we batched tokens up to 65536, which meant we could process at least 2 questions at once with a max sequence length of 32768 tokens. 
+
+We also utilized a speculative decoder model in the same model family with five token prediction, which is where a smaller tries to predict 5 tokens and the bigger model verifies those 5 tokens fall within the same distribution. This proved somewhat effective. We used our resources like medium sized GPUs on DSMLP and A100s on Google Colab, which are datacenter class GPUs designed for this type of workload.
+
 
 
 % \paragraph{Plans Forward. [0.25 pt]}
 % What do you plan to do from now until the final report? Any change of plans from the initial proposal? What decision factors contributed to this change of plans?
 
-\new{
 \paragraph{Lessons Learned. [0.5 pt]}
 What did you learn from this project?   Brainstorm in different aspects including selecting problems, literature survey, team formulation and technical implementation. 
 If given more time, what aspects and how would you improve your project development?
-}
+
+Communication was a huge challenge for us, considering the variety of backgrounds we came from. For example, one of our team-mates was a commuter, which meant we could not meet on campus all the time. Merging code on GitHub and delegating tasks was hard as well, as sometimes our work overlapped with each other (e.g. different prompt engineering techniques that was hard to combine into one). 
+
+Technically, one of the hardest challenges was getting the model in vLLM to work in different environments. Although DSMLP allowed us to use a unified platform, it was not always available, and we could not always use the same GPUs when it was available. This meant utilizing other platforms like local compute, Google Colab, and cloud compute like AWS and Azure. All these had unique constraints for running models, which meant we had to make some tradeoffs when designing the inference pipline.
+
+The model itself took a long time to run, which meant we had to limit the ways we tested the model. For instance, we would only test a small subset of the model, find the questions that were wrong, and make changes until those questions were right. Then we would run on a larger test set for a more representative sampling
+
+We have already learned many lessons that will carry well into future projects. While a Jupyter notebook was useful for data exploration, running models on it was impractical. Instead, we may use it for data exploration and small-scale testing, while more extensive testing 
 
 \paragraph{Team Responsibilities. [0.5 pt]}
 Summarize the background and expertise for each of your team member. Clearly identify each person's role and contribution in this project.
 
+Alexander Cojocaru - CS major with an interest in AI, specifically AI engineering and applying AI to practical application. Proficient in Python, C++, Pytorch, Pandas, and Java. Worked primarily on fine-tuning the model with QLoRA and prompt engineering, specifically using few-shot exemplars to guide the model in its thinking. Also worked on some of the inference plumbing for running the model like getting vLLM to use speculative decoding and increasing batch size to reduce inference time.
+
+Shash Dudeja - Math and CS Major. Helped with testing and making slides for the final presentation.
+
+Diego Otero-Caldwell - Fourth-year CS undergraduate at UC San Diego. Led the prompt-and-sampling track (Track~A) and the project's experimental infrastructure. Built the Phase~1 baseline inference and error-categorization pipeline, then consolidated it into the standardized \texttt{testing\_template.py} harness with a single \texttt{Config} dataclass, per-phase output naming, and checkpoint/resume so multi-hour DSMLP jobs survive pod expiration. Ran the Phase~2 formatting-prompt experiments, the full-dataset validation that surfaced the 8192-token truncation bottleneck, and the Phase~3 work that raised the generation budget to 32{,}768 tokens and swept sampling temperature (selecting temp~0.7); also ran and documented the majority-vote self-consistency experiment that was ultimately rejected. Authored \texttt{docs/process.md}, the single source of truth for all run notes and decisions, plus the dataset-quality and DSMLP long-jobs strategy docs, and contributed to the report write-up including the Related Work section.
 % \paragraph{Timelines. [0.75pt]}
 % Estimate the timeline with the milestones to achieve your expected outcome in this class, considering the discussion provided above.
 % \begin{itemize}
