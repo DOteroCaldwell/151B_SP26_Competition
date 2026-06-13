@@ -97,7 +97,7 @@ CSE 151B/251B Final Report
 
 
 \begin{abstract}
-Small language models are becoming surprisingly capable at math reasoning, but they still tend to break down on problems that require several careful steps. For this Kaggle competition, we explore whether a compact sub-5B model can be made more reliable without using external tools or scaling to a larger model. We fine-tune Qwen3-4B-Thinking with QLoRA on NuminaMath-CoT, then pair it with a structured prompting format that encourages the model to set up equations clearly, keep symbolic forms exact, check units, and delay numerical approximation until the end. This combination leads to cleaner intermediate reasoning and fewer obvious arithmetic or consistency mistakes. On the Kaggle competition public test set for CSE 151B, our approach improves the score from [baseline score] to [final score], and ablations suggest that fine-tuning and prompting work best when used together. While the model is still sensitive to formatting, the results show that careful adaptation can make small reasoning models more useful for math-heavy tasks under tool-free constraints.
+Small language models are becoming surprisingly capable at math reasoning, but they still tend to break down on problems that require several careful steps. For this Kaggle competition, we explore whether a compact sub-5B model can be made more reliable without using external tools or scaling to a larger model. We fine-tune Qwen3-4B-Thinking with QLoRA on NuminaMath-CoT, then pair it with a structured prompting format that encourages the model to set up equations clearly, keep symbolic forms exact, check units, and delay numerical approximation until the end. This combination leads to cleaner intermediate reasoning and fewer obvious arithmetic or consistency mistakes. On the Kaggle competition public test set for CSE 151B, our approach improves the score from 29.9\% to 61.19\%, and ablations suggest that fine-tuning and prompting work best when used together. While the model is still sensitive to formatting, the results show that careful adaptation can make small reasoning models more useful for math-heavy tasks under tool-free constraints.
 \end{abstract}
 
 
@@ -421,7 +421,7 @@ The correct answer is option B, $2\pi/3$.  The baseline response selected option
 \paragraph{Result 2. [1 pt] Fine-tuning improves overall accuracy, especially on MCQ questions.}
 After prompt engineering, we fine-tuned the model and evaluated the resulting checkpoint on the full public set.  Fine-tuning raised overall accuracy to 61.19\%, with 689 correct answers out of 1126 total questions.  The largest category-level improvement came from MCQ questions: the fine-tuned model answered 279 of 375 MCQ questions correctly, reaching 74.40\% accuracy.  This suggests that fine-tuning helped the model better map its reasoning to the discrete answer choices, which is especially useful when several answer options are numerically or symbolically close.
 
-\begin{table}[t]
+\begin{table}[h]
   \caption{Fine-tuned model evaluation on the full public set.}
   \label{tab:finetuned_public_results}
   \centering
