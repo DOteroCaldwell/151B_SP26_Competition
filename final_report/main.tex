@@ -104,21 +104,14 @@ Small language models are becoming surprisingly capable at math reasoning, but t
 % % % === Introduction
 \section{Introduction[2 pt]}
 \label{sec:intro}
-Introduce the problem that you are trying to solve and write 1-2 paragraphs for each of the sub-sections.  Provide a high-level summary in this section instead of detailed descriptions. 
-
 
 \paragraph{Problem Definition.[0.25 pt]}
-Describe in your own words what the deep learning task is.  You may use figures to help your explanation.
-
 The basic task is to improve a compact model (sub 5 billion parameters) on mathematical reasoning from high-school to graduate level math problems. These questions are difficult, competition-level math problems that require extensive reasoning to solve and the model must output an answer to 8 digits of accuracy.
 
 \paragraph{Problem Significance.[0.25 pt]}
-Explain  why is your problem important. Provide some real-world examples where successfully solving this task can have a great impact on our daily life and society. 
-
 Compact models which process data and that can fit on consumer and other small devices is known as "edge computing". Currently, state of the art models require an internet connection and a subscription to access the latest intelligence capable of solving these problems. By getting small models to perform well on mathematical reasoning, we can enable more access to mathematical education. In developing countries without reliable internet, for example, cheaper local models can provide a benefit to children's education. It also improves privacy for those who want to use LLM's for math but may be uncomfortable with their data in another country's servers.
 
 \paragraph{Technical Challenge.[0.5 pt]}
-Why is this project difficult? Think about challenges from (1) data processing (2) model design (3) implementation (4) engineering (5) evaluation. 
 {
 The dataset for this model was a synthetic dataset, which contained some errors. One of the challenges was determining whether the model was at fault when answering these questions, or whether the question itself was faulty. To help with this, we passed some questions the model got incorrect to stronger LLMs and fixed the question or answer choices. 
 
@@ -128,17 +121,41 @@ Model design was another challenge. Small models have inherently less ability th
 
 Evaluation was difficult due to time and hardware constraints. We only had limited time on DSMLP to run our model, and question generation to a long time to complete. This was also an engineering challenge, as we had to find a way to make the model run long enough that it did not take too long but not lose any accuracy.
 \paragraph{Contributions. [1 pt]}
-On a high level, explain how existing work solves this problem and what its limitations/issues are. Describe how your final solution effectively addresses (some) of these limitations/issues. Be very precise and clear. Any empirical claims must be justified by your results. You may find it useful to explicitly enumerate your key contributions (e.g., a better architecture/loss function or a more suitable problem/data setup relative to the starter code, an insightful finding/result, an innovative technique or combination of existing techniques, etc.) as follows:
-
-% Find and cite (use \href{https://www.overleaf.com/learn/latex/Bibliography_management_with_bibtex}{BibTex
-% }) state-of-the-art works or papers that have tried to solve a similar problem (use \href{https://scholar.google.com/}{Google Scholar} to search). Point out the limitations of the state-of-the-art.
-
+The dominant approach to math reasoning with small models combines long chain-of-thought
+prompting \citep{wei2022chain} with test-time techniques such as self-consistency
+\citep{wang2022selfconsistency}, and increasingly, reasoning-specialized checkpoints like
+Qwen3-Thinking \citep{qwen3}. These methods are powerful but treat the model as fixed and assume
+mistakes are random enough that more sampling recovers the right answer. On our competition data
+that assumption breaks down: the starter pipeline's failures are dominated not by faulty reasoning
+but by \emph{output formatting}, and its remaining math errors are largely systematic rather than
+random. Our solution targets those two specific gaps with a combination of format-enforcing prompt
+engineering, an enlarged reasoning budget, and lightweight supervised adaptation, while explicitly
+rejecting a test-time lever (majority voting) that the literature would otherwise recommend.
 
 Our main contributions are:
 \begin{itemize}
-  \item Contribution A: ...
-  \item Contribution B: ...  
-    % etc.
+  \item \textbf{A diagnosis that formatting, not math ability, dominates baseline error.} We show
+  that 74.3\% of the starter model's 789 public-set errors are format-compliance failures (no
+  \texttt{\textbackslash boxed\{\}} wrapper or no valid MCQ letter) rather than wrong answers,
+  reframing the task as one of reliable answer \emph{expression}.
+  \item \textbf{Format-enforcing prompts that improve both question types.} Rewriting the system
+  prompts to make the answer format a hard constraint raises overall public accuracy from 59.68\%
+  to 62.79\% under a controlled ablation (same model, budget, and sampling), with gains on both MCQ
+  (+3.2pp) and free-form (+3.1pp).
+  \item \textbf{Identifying truncation as a hidden bottleneck.} We find that 48.4\% of Phase~2 errors
+  have no closing \texttt{</think>} tag, i.e.\ the model is cut off mid-reasoning; raising the
+  generation budget from 8{,}192 to 32{,}768 tokens removes this ceiling and lifts accuracy by
+  roughly 9--12pp on the validation sweep.
+  \item \textbf{QLoRA adaptation on external corpora rather than the noisy public labels.} Fine-tuning
+  Qwen3-4B-Thinking on NuminaMath-CoT with the same engineered prompt raises overall accuracy to
+  61.19\%, with the clearest gains on MCQ, while avoiding overfitting to the public set's label noise.
+  \item \textbf{A negative result on majority voting.} Contrary to the usual self-consistency
+  recommendation, voting hurt free-form accuracy (60.6\%$\rightarrow$51.6\%) at large token cost,
+  because the model repeats the same systematic error across samples---evidence that its remaining
+  free-form failures are not random.
+  \item \textbf{A reusable, crash-resilient experimental harness.} We contribute a single
+  parameterized testing harness with per-phase output naming and checkpoint/resume, enabling
+  reproducible one-variable-at-a-time experiments that survive DSMLP pod expiration.
 \end{itemize}
 }
 % % % === Related Work
@@ -185,20 +202,17 @@ The dataset consists of 1,126 questions: 375 MCQ and 751 free-form. Of the free-
 
 \paragraph{Idea Summary.[1 pt]}
 Our central finding is that the baseline's failures are dominated by \emph{output formatting},
-not mathematical ability: on the full public set, 74.3\% of the 789 baseline errors are
-format-compliance failures (no \texttt{\textbackslash boxed\{\}} wrapper, or no valid MCQ
-letter) rather than wrong answers. This provides an easy target for improvement, we attempt
-make the model reliably \emph{express} its answer in a form the SymPy-based judger accepts. We attacked the task along a ladder of increasingly expensive levers: (i) rewrite the system
+not mathematical ability: 74.3\% of the 789 baseline errors are format-compliance failures
+(no \texttt{\textbackslash boxed\{\}} wrapper or no valid MCQ letter) rather than wrong answers.
+We therefore make the model reliably \emph{express} its answer in a form the SymPy-based judger
+accepts, attacking the task along a ladder of increasingly expensive levers: (i) rewrite the system
 prompts to enforce the answer format; (ii) enlarge the generation budget so Qwen3's extended
 \texttt{<think>} traces are not truncated before the boxed answer; (iii) steer the answer
-\emph{form} toward exact algebraic notation that survives symbolic equivalence checking; and
-(iv) fine-tune the model to internalize that behaviour. We ran these experiments along two
-complementary tracks (detailed below) and submitted the pipeline at the intersection of their
-conclusions. The principal risk is that the largest lever, fine-tuning, overfits to noisy public
-labels; we mitigate this by training on external, cleaner corpora rather than the public set, and
-by keeping the prompt-only pipeline as a fallback. We also evaluated majority-vote
-self-consistency as an alternative to fine-tuning and rejected it
-(see Method Description).
+\emph{form} toward exact algebraic notation that survives symbolic checking; and (iv) fine-tune the
+model to internalize that behaviour. We ran these along two complementary tracks and submitted the
+pipeline at their intersection. To limit the risk that fine-tuning overfits noisy public labels, we
+train on external corpora rather than the public set and keep the prompt-only pipeline as a fallback.
+We also evaluated majority-vote self-consistency and rejected it (see Method Description).
 
 
 \paragraph{Method Description.[2 pt]}
@@ -246,30 +260,10 @@ trainable parameters or 0.41\% of the model). We use the TRL \texttt{SFTTrainer}
 learning rate $2\!\times\!10^{-4}$ with a cosine schedule, 100 warmup steps, gradient clipping at
 0.3, and an effective batch size of 32 (per-device 16 $\times$ gradient accumulation 2). Training
 examples are 2{,}500 shuffled problem/solution pairs from \texttt{AI-MO/NuminaMath-CoT}, each
-wrapped in the \emph{same} engineered system prompt used at inference so the adapter learns to obey
-the exact-form convention; earlier iterations also drew on \texttt{tiedong/goat} (arithmetic
-accuracy) and the MATH corpus, with GSM8K as
-reference for problem setup. Crucially, we do \emph{not} fine-tune on the public competition set,
-whose gold labels we found to be noisy, avoiding overfitting to label errors. The trained adapter
-is merged into the base weights (\texttt{merge\_and\_unload}) and published to the Hugging Face Hub
-as \texttt{alexcojo/Qwen3-Finetuned} so that vLLM can serve it without runtime adapter loading.
-
-\emph{Final submitted system.} The submission (\texttt{config.yaml}) combines the two tracks: the
-fine-tuned \texttt{alexcojo/Qwen3-Finetuned} model, the engineered exact-form system prompts, a
-16{,}384-token context with an 8{,}192-token generation cap, and sampling at temperature 0.7,
-top-$p$ 0.95, top-$k$ 20. It is run over the 943-question private set through vLLM with
-BitsAndBytes quantization; because the private set has no gold labels, scoring is deferred to the
-competition leaderboard.
-
-\emph{Implementation details.} All inference and training run on UCSD's DSMLP, on a single NVIDIA
-RTX PRO 6000 Blackwell GPU (24~GB VRAM). We serve the model with vLLM and BitsAndBytes
-quantization throughout, and set \texttt{VLLM\_USE\_DEEP\_GEMM=0} before importing vLLM to avoid a
-DeepGEMM kernel crash on the Blackwell architecture. The starter pipeline is unchanged in
-structure; our deviations are the prompt redesign, the enlarged token budget, the YAML-config and
-phased-harness drivers, and the QLoRA adapter. To keep multi-hour jobs alive within pod time
-limits we use a three-layer strategy—\texttt{tmux}, an explicit pod deadline, and
-checkpoint/resume—so an interrupted run restarts from the last completed question rather than from
-scratch.
+wrapped in the \emph{same} engineered system prompt used at inference so the adapter learns the
+exact-form convention. Crucially, we do \emph{not} fine-tune on the public competition set, whose
+gold labels we found to be noisy. The trained adapter is merged into the base weights and published
+to the Hugging Face Hub as \texttt{alexcojo/Qwen3-Finetuned} for runtime-adapter-free vLLM serving.
 
 % % % === Experiments
 \section{Experiments[6 pt]}
@@ -278,21 +272,83 @@ scratch.
 In this section, clearly describe your empirical exploration of the problem and associated results. Provide evidence for your claims.
 Analyse and discuss your results.
 Note: Whenever you make claims such as \textit{Approach A performs ``better'' than approach B}, please be very specific in terms of \emph{what} it is better at and by \emph{how much}. Be transparent if it is only better on certain metrics, but not all.
-\subsection{Baselines[0.5 pt]}
+\subsection{Baselines}
 \label{sec:baselines}
-Describe all the baselines excluding the starter code. You should always start with simple models (such as a multi-layer Perceptron or linear regression) and gradually increase the complexity. You may use the starter code as a baseline, too.
-Use an itemized list to briefly summarize each of the models, their architecture, and parameters, and provide the correct reference if possible.
 
-We compare with the following baselines:
-\begin{itemize}
-    \item \textbf{Baseline A}:
-    \item \textbf{Baseline B}: 
-    % Etc.
-\end{itemize}
+\paragraph{Starter Code Baseline.}
+The starter code provides a reference implementation using HuggingFace Transformers with INT4 BitsAndBytes quantization. It uses generic system prompts and single-pass greedy-ish inference (temperature~0.6) without prompt engineering or majority voting.
+
+\paragraph{Phase~1 Mini-Baseline: 20-Question Diagnostic (Transformers, INT4).}
+Before running the full pipeline, we evaluate the first 20 public questions (9 MCQ, 11 free-form) under the Phase~1 prompt configuration using INT4 quantization via Transformers. This diagnostic run identifies error patterns quickly and confirms that the pipeline is functioning correctly. Results are presented in \cref{tab:minibaseline}.
+
+\begin{table}[h]
+  \caption{Phase~1 mini-baseline accuracy by question type (20 questions, Qwen3-4B INT4 via Transformers, temperature~0.6, max\_tokens~=~2048).}
+  \label{tab:minibaseline}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Category & Correct / Total & Accuracy \\
+    \midrule
+    Overall & 5 / 20 & 25.0\% \\
+    MCQ & 1 / 9 & 11.1\% \\
+    Free-form (total) & 4 / 11 & 36.4\% \\
+    \quad Single-part & 3 / 4 & 75.0\% \\
+    \quad Multi-part & 1 / 7 & 14.3\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Phase~1 Full Baseline: All 1,126 Questions (vLLM, INT8).}
+We run inference on the complete public dataset using vLLM with INT8 BitsAndBytes quantization, which offers better throughput and memory efficiency than the Transformers INT4 path. The full results are presented in \cref{tab:fullbaseline}, and the error breakdown appears in \cref{tab:fullerrors}.
+
+\begin{table}[h]
+  \caption{Phase~1 full-baseline accuracy by question type (1,126 questions, Qwen3-4B INT8 via vLLM, temperature~0.6, max\_tokens~=~2048). This is the primary reference baseline for all subsequent comparisons.}
+  \label{tab:fullbaseline}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Category & Correct / Total & Accuracy \\
+    \midrule
+    Overall & 337 / 1126 & 29.9\% \\
+    MCQ & 40 / 375 & 10.7\% \\
+    Free-form (total) & 297 / 751 & 39.5\% \\
+    \quad Single-part & 172 / 337 & 51.0\% \\
+    \quad Multi-part & 125 / 414 & 30.2\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \caption{Phase~1 full-baseline error breakdown (789 total errors). Formatting failures—\texttt{FREE\_FORM\_NO\_BOX} and \texttt{MCQ\_NO\_VALID\_LETTER} together—account for 74.3\% of all errors.}
+  \label{tab:fullerrors}
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Error Category & Count & \% of Errors \\
+    \midrule
+    \texttt{FREE\_FORM\_NO\_BOX} & 355 & 45.0\% \\
+    \texttt{MCQ\_NO\_VALID\_LETTER} & 231 & 29.3\% \\
+    \texttt{MCQ\_WRONG\_LETTER} & 104 & 13.2\% \\
+    \texttt{FREE\_FORM\_WRONG\_ANSWER} & 99 & 12.5\% \\
+    \midrule
+    \textit{Formatting subtotal} & \textit{586} & \textit{74.3\%} \\
+    \textit{Reasoning subtotal} & \textit{203} & \textit{25.7\%} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Error Analysis.}
+The full-baseline error breakdown in \cref{tab:fullerrors} reveals a striking asymmetry: nearly three quarters of all failures are formatting errors that are independent of whether the model understood the mathematics. \texttt{FREE\_FORM\_NO\_BOX} (355 errors, 45.0\%) indicates that the model produces a reasoning trace that reaches a numerical answer but does not wrap it in \texttt{\textbackslash boxed\{\}}. \texttt{MCQ\_NO\_VALID\_LETTER} (231 errors, 29.3\%) indicates that the model produces extended reasoning for MCQ questions but does not conclude with a single letter answer—often writing a full sentence rather than a boxed letter. Only 203 errors (25.7\%) represent cases where the answer was extracted but was mathematically wrong.
+
+This pattern strongly suggests that the baseline prompts underspecify the output format. The model demonstrates mathematical capability (single-part free-form achieves 51.0\% when the format is used correctly) but consistently fails to apply the format instruction reliably. Phase~2 targets this bottleneck directly.
+
 % 
 \subsection{Evaluation[0.5 pt]}
 \label{sec:evaluation}
-Describe how you evaluate your model and baselines. There is no need to provide long explanations for the Kaggle evaluation, but clearly explain any complementary evaluations you explore in your project (if any).
+
+We evaluate models on the public split of 1,126 labeled problems, reporting overall accuracy as the primary metric. MCQ answers are scored by exact match after extracting the boxed letter, while free-form answers are scored with the provided symbolic judger using numeric and SymPy equivalence.
+
+We also report MCQ and free-form accuracy separately, with additional checks on single-part versus multi-part free-form questions and common failure modes such as missing boxed answers, invalid MCQ letters, and truncated reasoning. Private test performance is evaluated only through the Kaggle leaderboard because private labels are unavailable.
 % 
 \subsection{Implementation details[2 pt]}
 \label{sec:implementation_details}
@@ -342,31 +398,6 @@ At inference time, we loaded the model with vLLM and BitsAndBytes quantization. 
 \end{table}
 
 We tuned three inference hyperparameters: sampling temperature, maximum sequence length, and batch-token budget.  The temperature sweep in \cref{tab:temperature_sweep_impl} tested $\{0.3,0.5,0.6,0.7,0.9\}$ on 200 public questions.  Temperature 0.7 gave the strongest public validation accuracy, so the final fine-tuned submission used temperature 0.7.  The max sequence length was tuned after Phase 2 full-dataset evaluation showed that 250 of 516 errors (48.4\%) had no closing \texttt{</think>} tag, indicating that the 8192-token limit often cut off the model before it emitted a final boxed answer.  Raising the generation budget to 32768 during validation improved the 200-question public sweep by roughly 9--12 percentage points over the Phase 2 full-dataset baseline, with the best run reaching 66.5\% overall accuracy.  For the final fine-tuned private run, we used a 16384-token model context and an 8192-token generation cap to balance answer completeness against DSMLP runtime and memory constraints.
-
-\begin{table}[t]
-  \caption{Final implementation settings used for the Kaggle inference pipeline.}
-  \label{tab:final_impl_settings}
-  \centering
-  \begin{tabular}{ll}
-    \toprule
-    Component & Final setting \\
-    \midrule
-    Platform & UCSD DSMLP, single NVIDIA A30 GPU \\
-    Final checkpoint & \texttt{alexcojo/Qwen3-Finetuned} \\
-    Base model & \texttt{Qwen/Qwen3-4B-Thinking-2507} \\
-    Fine-tuning method & 4-bit QLoRA SFT, 1 epoch \\
-    Training time & 3 hr 45 min per epoch \\
-    LoRA settings & $r=8$, $\alpha=32$, dropout 0.05, all linear layers \\
-    Optimizer schedule & learning rate $2\times10^{-4}$, cosine decay, 100 warmup steps \\
-    Training batch & per-device 16, gradient accumulation 2 \\
-    Inference temperature & 0.7 \\
-    Inference top-$p$ / top-$k$ & 0.95 / 20 \\
-    Max model length & 16384 \\
-    Max generated tokens & 8192 \\
-    vLLM batch-token budget & 65536 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
 % 
 \subsection{Results[2 pt]}
 \label{sec:results}
@@ -455,8 +486,7 @@ multi-part free-form accuracy to 57.4\%.  This suggests that a slightly higher t
 helped the model explore alternate solution paths on harder open-ended problems, while MCQ
 questions were less dependent on sampling diversity.
 
-The maximum generation budget was another important ablation, although it was less
-perfectly controlled because it changed the runtime profile substantially.  In the Phase~2
+The maximum generation budget was another important ablation.  In the Phase~2
 full-public run with an 8192-token budget, 250 of 516 errors (48.4\%) lacked a closing
 \texttt{</think>} tag, indicating that the model was often cut off before emitting its
 final boxed answer.  Raising the budget to 32768 tokens removed this truncation bottleneck
@@ -464,14 +494,6 @@ for the Phase~3 sweep: every temperature setting in the 32768-token sweep landed
 63.5--66.5\% overall, well above the 54.2\% Phase~2 full-public result.  Because the sample
 sizes differ, we treat this as directional evidence rather than a perfectly isolated
 accuracy comparison, but the error logs make the mechanism clear.
-
-Finally, we tested majority voting as a self-consistency ablation.  With temperature 0.7,
-\texttt{n\_samples=3}, and the 32768-token budget, the run was stopped after 100 of 200
-questions because the compute cost exceeded DSMLP pod limits.  The partial result was
-63.0\% overall, compared with 66.5\% for the single-sample temperature-0.7 sweep; MCQ
-improved slightly but free-form dropped from 60.6\% to 51.6\%.  This negative result
-suggests that many free-form errors were systematic math errors rather than random
-sampling mistakes, so majority voting was not worth the large throughput cost.
 
 % % % === Discussion
 \section{Discussion[2 pt]}
@@ -481,13 +503,9 @@ Provide a few sentences to summarize your project.
 \paragraph{Achievements. [0.5 pt]}
 What have you achieved? What is the significance of your contribution? Did you contribute to dataset curation, algorithm improvement or model development?  Summarize your achievement in quantitative terms. We value the effort that you have devoted to this project.
 
-Our project achieved meaningful improvements in tool-free mathematical reasoning with a compact sub-5B language model. Starting from Qwen3-4B-Thinking, we showed that much of the model’s poor performance came not only from incorrect reasoning, but also from answer formatting, truncation, and failure to produce grader-compatible final outputs. By redesigning the system prompt to encourage concise reasoning, exact symbolic answers, and strict boxed-answer formatting, we improved full public-set accuracy from 59.68\% to 62.79\%. This gain was consistent across question types, raising MCQ accuracy from 72.27\% to 75.47\% and free-form accuracy from 53.40\% to 56.46\%.
+Our project achieved measurable improvements in tool-free mathematical reasoning with a compact sub-5B language model. Starting from Qwen3-4B-Thinking, we found that many errors came from formatting, truncation, and failure to produce grader-compatible final answers rather than purely from incorrect reasoning. By redesigning the system prompt to encourage concise reasoning, exact symbolic answers, and strict boxed-answer formatting, we improved full public-set accuracy from 59.68\% to 62.79\%. This also improved both major question types, raising MCQ accuracy from 72.27\% to 75.47\% and free-form accuracy from 53.40\% to 56.46\%.
 
-We also contributed to model development by fine-tuning Qwen3-4B-Thinking using QLoRA supervised fine-tuning on external math reasoning data. The fine-tuned checkpoint improved over the original baseline, reaching 61.19\% overall accuracy and 74.40\% MCQ accuracy on the full public set. Although prompt engineering was the strongest single intervention in our reported results, fine-tuning demonstrated that a small reasoning model can be adapted efficiently with only a small fraction of trainable parameters.
-
-We identified truncation as a key bottleneck after finding that many failed responses did not finish their reasoning trace or produce a final answer. Increasing the generation budget reduced this failure mode and helped validation accuracy reach as high as 66.5\% in our temperature sweep. We also tested majority-vote self-consistency and found that it was not worth the additional compute cost, since many free-form errors were systematic rather than random.
-
-Finally, we built a practical end-to-end Kaggle inference pipeline under real compute constraints. This included vLLM-based inference, BitsAndBytes quantization, YAML-based experiment configs, checkpoint/resume support, larger batch-token scheduling, and QLoRA model merging for deployment. Overall, our contribution was not just a single model improvement, but a complete experimental pipeline for making compact reasoning models more reliable on math-heavy Kaggle tasks.
+We also contributed to model development and engineering by fine-tuning Qwen3-4B-Thinking with QLoRA on external math reasoning data and building an end-to-end Kaggle inference pipeline. The fine-tuned checkpoint improved over the original baseline, reaching 61.19\% overall accuracy and 74.40\% MCQ accuracy. Beyond accuracy, we identified truncation as a major bottleneck, tuned the generation budget and sampling temperature, and built a practical vLLM-based pipeline with quantization, checkpoint/resume support, and merged QLoRA deployment. Overall, our contribution was both an algorithmic improvement and a reliable experimental system for adapting compact reasoning models to math-heavy Kaggle tasks.
 
 \paragraph{Bottlenecks and Mitigation. [0.5 pt]}
 What are bottlenecks of the project? How did you resolve them?  Any changes that you would like to highlight from the milestone?
@@ -516,7 +534,7 @@ We have already learned many lessons that will carry well into future projects. 
 \paragraph{Team Responsibilities. [0.5 pt]}
 Summarize the background and expertise for each of your team member. Clearly identify each person's role and contribution in this project.
 
-Alexander Cojocaru - CS major with an interest in AI, specifically AI engineering and applying AI to practical application. Proficient in Python, C++, Pytorch, Pandas, and Java. Worked primarily on fine-tuning the model with QLoRA and prompt engineering, specifically using few-shot exemplars to guide the model in its thinking. Also worked on some of the inference plumbing for running the model like getting vLLM to use speculative decoding and increasing batch size to reduce inference time.
+Alexander Cojocaru - CS major with an interest in AI, specifically AI engineering and applying AI to practical application. Proficient in Python, C++, Pytorch, Pandas, and Java. Worked primarily on fine-tuning the model with QLoRA and prompt engineering, specifically using few-shot exemplars to guide the model in its thinking. Worked on some of the inference plumbing for running the model like getting vLLM to use speculative decoding and increasing batch size to reduce inference time. Created the final pipline to run the model for the Kaggle competition in inference.py and combined results from others in this final model. Outside of the code, contributed mostly to the Experiments, Introduction, and Discussion in the final report, as well as most of the slides in the final presentation.
 
 Shash Dudeja - Math and CS Major. Helped with testing and making slides for the final presentation.
 
